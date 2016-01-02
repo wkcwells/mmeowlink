@@ -62,9 +62,10 @@ the process is as follows.
 3. Install the compiler with the license code emailed to you automatically.
 4. Open the MMCommander project's src/MMCommander/MMCommander.eww file
 5. Edit the configuration.h file, setting:
-5.1 #define _TX_ENABLE_ 1
-5.2 #define _REPEATED_COMMAND_ENABLED_ 0
-5.3 #define _TX_FILTER_ENABLE_ 0
+  - If you are in the USA, set this to 1: #define \_USA\_FREQUENCY\_MODE\_ 1
+  - #define \_TX\_ENABLE\_ 1
+  - #define \_REPEATED\_COMMAND\_ENABLED\_ 0
+  - #define \_TX\_FILTER\_ENABLE\_ 0
 6. Build the project, which will generate you a .hex file.
 
 Once built, you will need to write the firmware to the stick.
