@@ -1,21 +1,18 @@
-
-
 from decocare.helpers import messages
-from mmeowlink.mmcommander_link import Link
-from mmeowlink.vendors import mmcommander_scan
 from mmeowlink.handlers.stick import Pump
+from mmeowlink.link_builder import LinkBuilder
 
 class SendMsgApp (messages.SendMsgApp):
   """
   mmeowlink adapter to decocare's SendMsgApp
   """
   def customize_parser (self, parser):
+    parser.add_argument('--radio_type', choices=['mmcommander', 'subg_rfspy'])
     parser = super(SendMsgApp, self).customize_parser(parser)
     return parser
 
   def prelude (self, args):
-    port = mmcommander_scan.scan()
-    self.link = link = Link( port=port )
+    self.link = link = LinkBuilder().build(args.radio_type, args.port)
     link.open()
     # get link
     # drain rx buffer

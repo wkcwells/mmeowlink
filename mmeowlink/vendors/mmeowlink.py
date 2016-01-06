@@ -1,8 +1,6 @@
 
 """
-mmeowlink - openaps driver for meowlink
-This emulates the stick from decocare, Based on the mmblelink code,
-which talks to the Rileylink.
+mmeowlink - openaps driver for cc1111/cc1110 devices
 """
 from openaps.uses.use import Use
 from openaps.uses.registry import Registry
@@ -16,11 +14,8 @@ from datetime import datetime
 from dateutil import relativedelta
 from dateutil.parser import parse
 
-from .. cli import messages
-from .. import mmcommander_link
 from .. handlers.stick import Pump
-
-from mmcommander_scan import scan
+from .. link_builder import LinkBuilder
 
 def configure_use_app (app, parser):
   pass
@@ -29,25 +24,25 @@ def configure_add_app (app, parser):
   medtronic.configure_add_app(app, parser)
 
 def configure_app (app, parser):
-  if app.parent.name == 'add':
-    pass
-def configure_parser (parser):
-  pass
+  parser.add_argument(
+    'radio_type',
+    help='Radio type: mmcommander or subg_rfspy'
+  )
+  parser.add_argument(
+    'port',
+    help='Radio serial port. e.g. /dev/ttyACM0 or /dev/ttyMFD1'
+  )
+
+def get_params(self, args):
+  params = {key: args.__dict__.get(key) for key in (
+    'radio_type',
+    'port'
+  )}
+
 def main (args, app):
   pass
 
 use = Registry( )
-#
-# @use( )
-# class scan (Use):
-#   """ scan for usb stick """
-#   def configure_app (self, app, parser):
-#     pass
-#   def scanner (self):
-#     from mmcommander_scan import scan
-#     return scan( )
-#   def main (self, args, app):
-#     return self.scanner( )
 
 def setup_logging (self):
   log = logging.getLogger(decocare.__name__)
@@ -60,10 +55,10 @@ def setup_logging (self):
 
 def setup_medtronic_link (self):
   serial = self.device.get('serial')
+  radio_type = self.device.get('radio_type')
+  port = self.device.get('port')
 
-  port = scan()
-
-  link = mmcommander_link.Link( port )
+  link = LinkBuilder().build(radio_type, port)
   self.pump = Pump(link, serial)
 
 import logging
@@ -96,6 +91,8 @@ def substitute (name, usage, Master=MedtronicTask, Original=medtronic.MedtronicT
 
 def set_config (args, device):
   device.add_option('serial', args.serial)
+  device.add_option('radio_type', args.radio_type)
+  device.add_option('port', args.port)
 
 def display_device (device):
   return ''
