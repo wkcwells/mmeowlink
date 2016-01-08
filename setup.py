@@ -8,7 +8,6 @@ setup(
     include_package_data=True,
     install_requires=["python-dateutil", "decocare"],
     scripts = [
-      'bin/mmeowlink'
-    , 'bin/mmeowlink-send.py'
+      'bin/mmeowlink-send.py'
     ]
 )
