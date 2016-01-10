@@ -1,3 +1,4 @@
+from exceptions import InvalidPacketReceived
 
 class FourBySix (object):
   SYMBOLS = {
@@ -78,5 +79,10 @@ class FourBySix (object):
     decoded_hex = ''.join(symbols)
     if (len(decoded_hex) % 2) != 0:
       decoded_hex = decoded_hex + "\x00"
-    data = bytearray(str(decoded_hex).decode('hex'))
+
+    try:
+      data = bytearray(str(decoded_hex).decode('hex'))
+    except TypeError as e:
+      raise InvalidPacketReceived("Error decoding FourBySix packet")
+
     return data
