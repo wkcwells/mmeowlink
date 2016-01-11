@@ -25,16 +25,11 @@ USB device with a [MMCommander](https://github.com/jberian/mmcommander) stick.
 This is based on the hard work done by Ben West for the [mmblelink](https://github.com/bewest/mmblelink)
 project for the [RileyLink](https://github.com/ps2/rileylink).
 
-## So what's that get us?
+# Wiki
 
-1. This gives us better range than the CareLink can provide. Our experience is
-  that the device can cover a reasonably sized room when placed centrally.
-2. When placed a under a bed, there are no missing gaps in overnight OpenAPS
-  coverage. You no longer need two CareLink sticks for coverage.
-3. Unlike the CareLink stick, the MMCommander sticks can be used with the [Intel
-  Edison](http://www.intel.com/content/www/us/en/do-it-yourself/edison.html).
-  This allows us to replace the Raspberry Pi with the much smaller and lower
-  power-consumption Edison.
+Please see the Wiki for [Wiki](https://github.com/oskarpearson/mmeowlink/wiki) for
+photos, setup instructions and more.
+
 
 # Hardware
 
@@ -81,7 +76,7 @@ it as follows:
     cd ~
     git clone https://github.com/oskarpearson/mmeowlink.git mmeowlink-source
     cd mmeowlink-source
-    git checkout mmcommander
+    git checkout master
     sudo pip install -e .
 
 ## Add the vendor:
@@ -134,3 +129,4 @@ The pump.ini file would contain the following:
     port = /dev/ttyMFD1
     radio_type = subg_rfspy
 
+For the mmcommander hardware, replace 'subg_rfspy' with 'mmcommander'
