@@ -30,44 +30,6 @@ project for the [RileyLink](https://github.com/ps2/rileylink).
 Please see the Wiki for [Wiki](https://github.com/oskarpearson/mmeowlink/wiki) for
 photos, setup instructions and more.
 
-
-# Hardware
-
-You will need the following:
-
-- [cc1111emk868-915](http://www.ti.com/tool/cc1111emk868-915)
-- [TI Debugger](http://www.ti.com/tool/cc-debugger) or a
-  [GoodFET](http://goodfet.sourceforge.net) or similar.
-  (You only need this for the first installation. See if a local Hackspace
-    or other user could help you)
-- [Writeable MMCommander Firmware](https://github.com/jberian/mmcommander)
-  See the instructions for how to set this up.
-
-# Writing the Firmware
-
-I still hope to release an RfCat version of this software,
-which would remove the requirement to write custom firmware. At this stage,
-this process is still very cumbersome.
-
-The best instructions for this are on the MMCommander website. However,
-the process is as follows.
-
-1. Download the MMCommander source code.
-2. Sign up for a trial license of the [EW8051 compiler](http://supp.iar.com/Download/SW/?item=EW8051-EVAL) / [Homepage](https://www.iar.com/iar-embedded-workbench/8051/)
-3. Install the compiler with the license code emailed to you automatically.
-4. Open the MMCommander project's src/MMCommander/MMCommander.eww file
-5. Edit the configuration.h file, setting:
-  - If you are in the USA, set this to 1: #define \_USA\_FREQUENCY\_MODE\_ 1
-  - #define \_TX\_ENABLE\_ 1
-  - #define \_REPEATED\_COMMAND\_ENABLED\_ 0
-  - #define \_TX\_FILTER\_ENABLE\_ 0
-6. Build the project, which will generate you a .hex file.
-
-Once built, you will need to write the firmware to the stick.
-To do this, you will need to follow the instructions for the
-[TI Flash Programmer Tool](http://www.ti.com/tool/flash-programmer).
-Alternatively, [CC-Tool](http://sourceforge.net/projects/cctool/) works well too.
-
 # Setup
 
 As this is still a WIP, I don't have a Python package available yet. Install
