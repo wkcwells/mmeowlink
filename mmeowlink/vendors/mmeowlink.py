@@ -16,6 +16,9 @@ from dateutil.parser import parse
 
 from .. handlers.stick import Pump
 from .. link_builder import LinkBuilder
+from .. radio_config_builder import RadioConfigBuilder
+
+from subg_rfspy_radio_params import SubgRfspyRadioParams
 
 def configure_use_app (app, parser):
   pass
@@ -24,6 +27,8 @@ def configure_add_app (app, parser):
   medtronic.configure_add_app(app, parser)
 
 def configure_app (app, parser):
+  SubgRfspyRadioParams.add_arguments(parser)
+
   parser.add_argument(
     'radio_type',
     help='Radio type: mmcommander or subg_rfspy'
@@ -32,6 +37,7 @@ def configure_app (app, parser):
     'port',
     help='Radio serial port. e.g. /dev/ttyACM0 or /dev/ttyMFD1'
   )
+
 
 def get_params(self, args):
   params = {key: args.__dict__.get(key) for key in (
@@ -58,7 +64,9 @@ def setup_medtronic_link (self):
   radio_type = self.device.get('radio_type')
   port = self.device.get('port')
 
-  link = LinkBuilder().build(radio_type, port)
+  radio_config = RadioConfigBuilder.build(radio_type, args)
+
+  link = LinkBuilder().build(radio_type, port, radio_config)
   self.pump = Pump(link, serial)
 
 import logging
