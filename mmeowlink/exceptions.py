@@ -7,6 +7,9 @@ class InvalidPacketReceived(Exception):
 class MMCommanderNotWriteable(Exception):
   pass
 
+class SubgRfspyVersionNotSupported (Exception):
+  pass
+
 class PortNotFound(Exception):
   pass
 
