@@ -9,7 +9,7 @@ import time
 from decocare.lib import hexdump, CRC8
 
 from .. fourbysix import FourBySix
-from .. exceptions import InvalidPacketReceived, CommsException
+from .. exceptions import InvalidPacketReceived, CommsException, SubgRfspyVersionNotSupported
 
 from serial_interface import SerialInterface
 from serial_rf_spy import SerialRfSpy
@@ -21,6 +21,15 @@ class SubgRfspyLink(SerialInterface):
   TIMEOUT = 1
   REPETITION_DELAY = 0
   MAX_REPETITION_BATCHSIZE = 250
+
+  # Which version of subg_rfspy do we support?
+  SUPPORTED_VERSIONS = ["0.6"]
+
+  RFSPY_ERRORS = {
+    0xaa: "Timeout",
+    0xbb: "Command Interrupted",
+    0xcc: "Zero Data"
+  }
 
   def __init__(self, device):
     self.timeout = 1
@@ -37,9 +46,12 @@ class SubgRfspyLink(SerialInterface):
 
     # Check it's a SerialRfSpy device by retrieving the firmware version
     self.serial_rf_spy.send_command(self.serial_rf_spy.CMD_GET_VERSION, timeout=1)
-    version = self.serial_rf_spy.get_response(timeout=1)
+    version = self.serial_rf_spy.get_response(timeout=1).split(' ')[1]
 
     log.debug( 'serial_rf_spy Firmare version: %s' % version)
+
+    if version not in self.SUPPORTED_VERSIONS:
+      raise SubgRfspyVersionNotSupported("Your subg_rfspy version (%s) is not in the supported version list: %s" % (version, "".join(self.SUPPORTED_VERSIONS)))
 
   def write( self, string, repetitions=1, repetition_delay=0, timeout=None ):
     rf_spy = self.serial_rf_spy
@@ -70,7 +82,11 @@ class SubgRfspyLink(SerialInterface):
 
     resp = rf_spy.do_command(SerialRfSpy.CMD_GET_PACKET, chr(self.channel) + chr(timeout_ms_high) + chr(timeout_ms_low), timeout=timeout + 1)
     if not resp:
-      raise CommsException("Did not get a response")
+      raise CommsException("Did not get a response, or response is too short: %s" % len(resp))
+
+    # If the length is 1, then it means we've received an error
+    if len(resp) == 1:
+      raise CommsException("Received an error response %s" % self.RFSPY_ERRORS[ resp[0] ])
 
     decoded = FourBySix.decode(resp[2:])
 
