@@ -1,10 +1,15 @@
 import logging
 import serial
 
+from .. import fuser
+
 io  = logging.getLogger( )
 log = io.getChild(__name__)
 
 class NotImplementedException (Exception):
+  pass
+
+class AlreadyInUseException (Exception):
   pass
 
 class SerialInterface (object):
@@ -13,6 +18,9 @@ class SerialInterface (object):
     if not self.serial:
       log.info( '{agent} opening serial port'
         .format(agent=self.__class__.__name__ ))
+
+      if fuser.in_use(self.device):
+        raise AlreadyInUseException("%s already in use" % self.device)
 
       self.serial = serial.Serial( self.device, self.speed )
       self.clear_receive_buffer('New port open')
@@ -26,6 +34,7 @@ class SerialInterface (object):
 
     self.clear_receive_buffer('Closing port')
     self.serial.close( )
+    self.serial = None
     return True
 
   # Tries to clear out the receive buffer, reading any outstanding bytes
