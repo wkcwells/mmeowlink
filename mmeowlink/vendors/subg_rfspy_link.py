@@ -128,5 +128,5 @@ class SubgRfspyLink(SerialInterface):
     return {'rssi':rssi, 'sequence':sequence, 'data':decoded}
 
   def read( self, timeout=None ):
-    return self.read(timeout)['data']
+    return self.get_packet(timeout)['data']
 
