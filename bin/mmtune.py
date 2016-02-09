@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 
 import sys
+import json
 from decocare.lib import CRC8
 from mmeowlink.exceptions import CommsException,InvalidPacketReceived
 
 from mmeowlink.vendors.subg_rfspy_link import SubgRfspyLink
 
 class MMTune:
+  DEFAULT_FREQ = 916.630
+
   def __init__(self, path, pumpserial):
     self.link = SubgRfspyLink(path)
     self.pumpserial = pumpserial
@@ -15,7 +18,7 @@ class MMTune:
     self.link.update_register(SubgRfspyLink.REG_MDMCFG4, 0xd9)
 
     # Pump in free space
-    self.link.set_base_freq(916.630)
+    self.link.set_base_freq(self.DEFAULT_FREQ)
 
     # Sometimes getting lower ber with 0x07 here (default is 0x03)
     self.link.update_register(SubgRfspyLink.REG_AGCCTRL2, 0x07)
@@ -28,17 +31,20 @@ class MMTune:
     # default (0x91) seems to work best
     #self.link.update_register(SubgRfspyLink.REG_AGCCTRL0, 0x91)
 
-    print "waking..."
+    #print "waking..."
     self.wakeup()
 
-    print "scanning..."
+    #print "scanning..."
     results = self.scan_over_freq(916.5, 916.9, 20)
-    if results[0][1] > 0:
-      print "Setting to best freq of " + results[0][0]
-      best = float(results[0][0])
-      self.link.set_base_freq(best)
-    else:
-      self.link.set_base_freq(916.630)
+    results_sorted = list(reversed(sorted(results, key=lambda x: x[1:])))
+    set_freq = self.DEFAULT_FREQ
+    used_default = True
+    if results_sorted[0][1] > 0:
+      used_default = False
+      set_freq = float(results_sorted[0][0])
+    self.link.set_base_freq(set_freq)
+    output = {'scanDetails': results, 'setFreq': set_freq, 'usedDefault': used_default}
+    print json.dumps(output, sort_keys=True,indent=4, separators=(',', ': '))
 
   def run_trial(self, var):
     sample_size = 5
@@ -57,7 +63,7 @@ class MMTune:
   
     avg_rssi = sum(rssi_readings)/len(rssi_readings)
     
-    print "%s, %d, rssi:%0.1f" % (var, error_count, avg_rssi)
+    #print "%s, %d, rssi:%0.1f" % (var, error_count, avg_rssi)
     return [var, success_count, avg_rssi]
 
 
@@ -69,7 +75,7 @@ class MMTune:
       self.link.set_base_freq(cur_freq)
       results.append(self.run_trial("%0.3f" % cur_freq))
       cur_freq += step_size
-    return list(reversed(sorted(results, key=lambda x: x[1:])))
+    return results
 
   def send_packet(self, data, tx_count=1, msec_repeat_delay=0):
     buf = bytearray()
@@ -86,13 +92,13 @@ class MMTune:
       self.send_packet("a7" + self.pumpserial + "8d00")
       try:
         packet = self.get_packet(0.08)
-        print "packet = " + str(packet)
+        #print "packet = " + str(packet)
       except CommsException: 
         packet = None
-        print "No response..."
+        #print "No response..."
         pass
       if packet:
-        print "Woke up pump: " + str(packet)
+        #print "Woke up pump: " + str(packet)
         awake = True
         break
 
@@ -103,14 +109,8 @@ class MMTune:
         wake_ack = self.get_packet(9) # wait 9 s for response
       except (CommsException, InvalidPacketReceived):
         wake_ack = None
-        print "No response..."
+        #print "No response..."
         pass
-
-      if wake_ack:
-        print "wake ack: " + str(wake_ack)
-      else:
-        print "Pump not responding"
-
 
 if __name__ == '__main__':
   if len(sys.argv) < 3:
