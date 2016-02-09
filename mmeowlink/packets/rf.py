@@ -70,20 +70,6 @@ class Packet (_Packet):
     return calculated
 
   @classmethod
-  def from_hex_without_crc(klass, hex):
-    buf = hex.decode('hex')
-    record = dict(
-           , type = buf[0]
-           , serial = hex[2:8]
-           , op = buf[4]
-           , payload = buf[5:]
-           , payload_hex = hex[10:]
-           , crc = lib.CRC8.compute(buf) 
-           )
-    pkt = klass(**record)
-    return pkt
-
-  @classmethod
   def fromBuffer (klass, buf, stamp=None, timezone=None, chan=None):
     stamp = stamp or time.time( )
     # dt = datetime.fromtimestamp(stamp).replace(tzinfo=self.args.timezone)
