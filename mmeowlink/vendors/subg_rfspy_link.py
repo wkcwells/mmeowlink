@@ -96,7 +96,7 @@ class SubgRfspyLink(SerialInterface):
 
       rf_spy.do_command(rf_spy.CMD_SEND_PACKET, message, timeout=timeout)
 
-  def read( self, timeout=None ):
+  def get_packet( self, timeout=None ):
     rf_spy = self.serial_rf_spy
 
     if timeout is None:
@@ -116,4 +116,17 @@ class SubgRfspyLink(SerialInterface):
 
     decoded = FourBySix.decode(resp[2:])
 
-    return decoded
+    rssi_dec = resp[0]
+    rssi_offset = 73
+    if rssi_dec >= 128:
+      rssi = (( rssi_dec - 256) / 2) - rssi_offset
+    else:
+      rssi = (rssi_dec / 2) - rssi_offset
+      
+    sequence = resp[1]
+
+    return {'rssi':rssi, 'sequence':sequence, 'data':decoded}
+
+  def read( self, timeout=None ):
+    return self.read(timeout)['data']
+

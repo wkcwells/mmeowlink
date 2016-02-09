@@ -2,7 +2,7 @@
 
 import sys
 from decocare.lib import CRC8
-from mmeowlink.exceptions import CommsException
+from mmeowlink.exceptions import CommsException,InvalidPacketReceived
 
 from mmeowlink.vendors.subg_rfspy_link import SubgRfspyLink
 
@@ -12,7 +12,6 @@ class MMTune:
     self.pumpserial = pumpserial
 
   def run(self):
-    print "scanning..."
     self.link.update_register(SubgRfspyLink.REG_MDMCFG4, 0xd9)
 
     # Pump in free space
@@ -32,12 +31,12 @@ class MMTune:
     print "waking..."
     self.wakeup()
 
+    print "scanning..."
     results = self.scan_over_freq(916.5, 916.9, 20)
     if results[0][1] > 0:
-      print "Setting to best freq of #{results[0][0]}"
-      best = results[0][0].to_f
+      print "Setting to best freq of " + results[0][0]
+      best = float(results[0][0])
       self.link.set_base_freq(best)
-      continuous_trial
     else:
       self.link.set_base_freq(916.630)
 
@@ -51,8 +50,8 @@ class MMTune:
       try: 
         packet = self.get_packet(0.080)
         success_count += 1
-        rssi_readings.append(packet.rssi)
-      except CommsException: 
+        rssi_readings.append(packet["rssi"])
+      except (CommsException,InvalidPacketReceived):
         error_count += 1
         rssi_readings.append(-99)
   
@@ -70,7 +69,7 @@ class MMTune:
       self.link.set_base_freq(cur_freq)
       results.append(self.run_trial("%0.3f" % cur_freq))
       cur_freq += step_size
-    return sorted(results, key=lambda x: x[1:])
+    return list(reversed(sorted(results, key=lambda x: x[1:])))
 
   def send_packet(self, data, tx_count=1, msec_repeat_delay=0):
     buf = bytearray()
@@ -79,7 +78,7 @@ class MMTune:
     self.link.write(buf, tx_count, msec_repeat_delay)
 
   def get_packet(self, timeout=0):
-    return self.link.read(timeout)
+    return self.link.get_packet(timeout)
 
   def wakeup(self):
     awake = False
@@ -87,13 +86,13 @@ class MMTune:
       self.send_packet("a7" + self.pumpserial + "8d00")
       try:
         packet = self.get_packet(0.08)
-        print "packet = " + packet
+        print "packet = " + str(packet)
       except CommsException: 
         packet = None
         print "No response..."
         pass
       if packet:
-        print "Woke up pump: " + packet
+        print "Woke up pump: " + str(packet)
         awake = True
         break
 
@@ -102,13 +101,13 @@ class MMTune:
       self.send_packet("a7" + self.pumpserial + "5d00", 200)
       try:
         wake_ack = self.get_packet(9) # wait 9 s for response
-      except CommsException:
+      except (CommsException, InvalidPacketReceived):
         wake_ack = None
         print "No response..."
         pass
 
       if wake_ack:
-        print "wake ack: " + wake_ack
+        print "wake ack: " + str(wake_ack)
       else:
         print "Pump not responding"
 
