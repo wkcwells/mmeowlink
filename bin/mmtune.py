@@ -29,9 +29,10 @@ class MMTune:
     # default (0x91) seems to work best
     #self.link.update_register(SubgRfspyLink.REG_AGCCTRL0, 0x91)
 
-    self.wakeup
+    print "waking..."
+    self.wakeup()
 
-    results = scan_over_freq(916.5, 916.9, 20)
+    results = self.scan_over_freq(916.5, 916.9, 20)
     if results[0][1] > 0:
       print "Setting to best freq of #{results[0][0]}"
       best = results[0][0].to_f
@@ -40,6 +41,36 @@ class MMTune:
     else:
       self.link.set_base_freq(916.630)
 
+  def run_trial(self, var):
+    sample_size = 5
+    success_count = 0
+    error_count = 0
+    rssi_readings = []
+    for i in xrange(sample_size):
+      self.send_packet("a7" + self.pumpserial + "8d00") # Get Model
+      try: 
+        packet = self.get_packet(0.080)
+        success_count += 1
+        rssi_readings.append(packet.rssi)
+      except CommsException: 
+        error_count += 1
+        rssi_readings.append(-99)
+  
+    avg_rssi = sum(rssi_readings)/len(rssi_readings)
+    
+    print "%s, %d, rssi:%0.1f" % (var, error_count, avg_rssi)
+    return [var, success_count, avg_rssi]
+
+
+  def scan_over_freq(self, start_freq, end_freq, steps):
+    step_size = (end_freq - start_freq) / steps
+    cur_freq = start_freq
+    results = []
+    while cur_freq < end_freq:
+      self.link.set_base_freq(cur_freq)
+      results.append(self.run_trial("%0.3f" % cur_freq))
+      cur_freq += step_size
+    return sorted(results, key=lambda x: x[1:])
 
   def send_packet(self, data, tx_count=1, msec_repeat_delay=0):
     buf = bytearray()
@@ -56,6 +87,7 @@ class MMTune:
       self.send_packet("a7" + self.pumpserial + "8d00")
       try:
         packet = self.get_packet(0.08)
+        print "packet = " + packet
       except CommsException: 
         packet = None
         print "No response..."
