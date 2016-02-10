@@ -15,17 +15,19 @@ class MMTune:
   def run(self):
     self.link.update_register(SubgRfspyLink.REG_MDMCFG4, 0xd9)
 
-
-    # Sometimes getting lower ber with 0x07 here (default is 0x03)
-    self.link.update_register(SubgRfspyLink.REG_AGCCTRL2, 0x07)
-
-    self.link.update_register(SubgRfspyLink.REG_AGCCTRL1, 0x40)
-
-    # With rx bw > 101kzHZ, this should be 0xB6, otherwise 0x56
-    self.link.update_register(SubgRfspyLink.REG_FREND1, 0x56)
-
-    # default (0x91) seems to work best
-    #self.link.update_register(SubgRfspyLink.REG_AGCCTRL0, 0x91)
+    ############################################################################
+    # Commented these out as they may be causing issues with certain pumps:
+    ############################################################################
+    # # Sometimes getting lower ber with 0x07 here (default is 0x03)
+    # self.link.update_register(SubgRfspyLink.REG_AGCCTRL2, 0x07)
+    #
+    # self.link.update_register(SubgRfspyLink.REG_AGCCTRL1, 0x40)
+    #
+    # # With rx bw > 101kzHZ, this should be 0xB6, otherwise 0x56
+    # self.link.update_register(SubgRfspyLink.REG_FREND1, 0x56)
+    #
+    # # default (0x91) seems to work best
+    # #self.link.update_register(SubgRfspyLink.REG_AGCCTRL0, 0x91)
 
     #print "waking..."
     self.wakeup()
@@ -110,4 +112,3 @@ class MMTune:
         wake_ack = None
         #print "No response..."
         pass
-
