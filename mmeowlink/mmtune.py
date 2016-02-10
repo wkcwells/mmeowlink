@@ -15,8 +15,6 @@ class MMTune:
   def run(self):
     self.link.update_register(SubgRfspyLink.REG_MDMCFG4, 0xd9)
 
-    # Pump in free space
-    self.link.set_base_freq(self.DEFAULT_FREQ)
 
     # Sometimes getting lower ber with 0x07 here (default is 0x03)
     self.link.update_register(SubgRfspyLink.REG_AGCCTRL2, 0x07)
@@ -101,6 +99,9 @@ class MMTune:
         break
 
     if awake != True:
+      # Pump in free space
+      self.link.set_base_freq(self.DEFAULT_FREQ)
+
       # Send 200 wake-up packets
       self.send_packet("a7" + self.pumpserial + "5d00", 200)
       try:
