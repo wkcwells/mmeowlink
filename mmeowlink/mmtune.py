@@ -13,11 +13,11 @@ class MMTune:
     self.pumpserial = pumpserial
 
   def run(self):
-    self.link.update_register(SubgRfspyLink.REG_MDMCFG4, 0xd9)
-
     ############################################################################
     # Commented these out as they may be causing issues with certain pumps:
     ############################################################################
+    # self.link.update_register(SubgRfspyLink.REG_MDMCFG4, 0xd9)
+    #
     # # Sometimes getting lower ber with 0x07 here (default is 0x03)
     # self.link.update_register(SubgRfspyLink.REG_AGCCTRL2, 0x07)
     #
@@ -51,16 +51,16 @@ class MMTune:
     rssi_readings = []
     for i in xrange(sample_size):
       self.send_packet("a7" + self.pumpserial + "8d00") # Get Model
-      try: 
+      try:
         packet = self.get_packet(0.080)
         success_count += 1
         rssi_readings.append(packet["rssi"])
       except (CommsException,InvalidPacketReceived):
         error_count += 1
         rssi_readings.append(-99)
-  
+
     avg_rssi = sum(rssi_readings)/len(rssi_readings)
-    
+
     #print "%s, %d, rssi:%0.1f" % (var, error_count, avg_rssi)
     return [var, success_count, avg_rssi]
 
@@ -91,7 +91,7 @@ class MMTune:
       try:
         packet = self.get_packet(0.08)
         #print "packet = " + str(packet)
-      except (CommsException, InvalidPacketReceived): 
+      except (CommsException, InvalidPacketReceived):
         packet = None
         #print "No response..."
         pass
