@@ -110,8 +110,8 @@ class SubgRfspyLink(SerialInterface):
     if not resp:
       raise CommsException("Did not get a response, or response is too short: %s" % len(resp))
 
-    # If the length is 1, then it means we've received an error
-    if len(resp) == 1:
+    # If the length is less than or equal to 2, then it means we've received an error
+    if len(resp) <= 2:
       raise CommsException("Received an error response %s" % self.RFSPY_ERRORS[ resp[0] ])
 
     decoded = FourBySix.decode(resp[2:])
