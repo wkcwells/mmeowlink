@@ -21,6 +21,21 @@ class SubgRfspyLink(SerialInterface):
   TIMEOUT = 1
   REPETITION_DELAY = 0
   MAX_REPETITION_BATCHSIZE = 250
+  FREQ_XTAL = 24000000
+
+  REG_FREQ2 = 0x09
+  REG_FREQ1 = 0x0A
+  REG_FREQ0 = 0x0B
+  REG_MDMCFG4 = 0x0C
+  REG_MDMCFG3 = 0x0D
+  REG_MDMCFG2 = 0x0E
+  REG_MDMCFG1 = 0x0F
+  REG_MDMCFG0 = 0x10
+  REG_AGCCTRL2 = 0x17
+  REG_AGCCTRL1 = 0x18
+  REG_AGCCTRL0 = 0x19
+  REG_FREND1 = 0x1A
+  REG_FREND0 = 0x1B
 
   # Which version of subg_rfspy do we support?
   SUPPORTED_VERSIONS = ["0.6"]
@@ -38,6 +53,17 @@ class SubgRfspyLink(SerialInterface):
     self.channel = 0
 
     self.open()
+
+  def update_register(self, reg, value, timeout=1):
+    args = chr(reg) + chr(value)
+    self.serial_rf_spy.do_command(self.serial_rf_spy.CMD_UPDATE_REGISTER, args, timeout=timeout)
+
+  def set_base_freq(self, freq_mhz):
+    val = ((freq_mhz * 1000000)/(self.FREQ_XTAL/float(2**16)))
+    val = long(val)
+    self.update_register(self.REG_FREQ0, val & 0xff)
+    self.update_register(self.REG_FREQ1, (val >> 8) & 0xff)
+    self.update_register(self.REG_FREQ2, (val >> 16) & 0xff)
 
   def check_setup(self):
     self.serial_rf_spy = SerialRfSpy(self.serial)
@@ -70,7 +96,7 @@ class SubgRfspyLink(SerialInterface):
 
       rf_spy.do_command(rf_spy.CMD_SEND_PACKET, message, timeout=timeout)
 
-  def read( self, timeout=None ):
+  def get_packet( self, timeout=None ):
     rf_spy = self.serial_rf_spy
 
     if timeout is None:
@@ -90,4 +116,17 @@ class SubgRfspyLink(SerialInterface):
 
     decoded = FourBySix.decode(resp[2:])
 
-    return decoded
+    rssi_dec = resp[0]
+    rssi_offset = 73
+    if rssi_dec >= 128:
+      rssi = (( rssi_dec - 256) / 2) - rssi_offset
+    else:
+      rssi = (rssi_dec / 2) - rssi_offset
+      
+    sequence = resp[1]
+
+    return {'rssi':rssi, 'sequence':sequence, 'data':decoded}
+
+  def read( self, timeout=None ):
+    return self.get_packet(timeout)['data']
+
