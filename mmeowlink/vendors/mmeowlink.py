@@ -8,6 +8,7 @@ from openaps.configurable import Configurable
 import decocare
 import argparse
 import json
+from .. mmtune import MMTune
 from openaps.vendors import medtronic
 # from decocare import stick, session, link, commands, history
 from datetime import datetime
@@ -63,6 +64,27 @@ def setup_medtronic_link (self):
 
 import logging
 import logging.handlers
+
+@use( )
+class mmtune (medtronic.MedtronicTask):
+  """ Scan for best frequency
+
+  This will attempt to communicate with the pump at a range
+  of frequencies, and set your radio to the frequency it 
+  gets the best results on.
+  """
+  uart = None        # Unused attribute - but is required for OpenAPS
+  pump = None        # Unused attribute - but is required for OpenAPS
+
+  def setup_medtronic (self):
+    setup_logging(self)
+    setup_medtronic_link(self)
+    serial = self.device.get('serial')
+    self.mmtune = MMTune(self.pump.link, serial)
+
+  def main (self, args, app):
+    return self.mmtune.run( )
+
 class MedtronicTask (medtronic.MedtronicTask):
   def setup_medtronic (self):
     setup_logging(self)
