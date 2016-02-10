@@ -93,7 +93,7 @@ class MMTune:
       try:
         packet = self.get_packet(0.08)
         #print "packet = " + str(packet)
-      except CommsException: 
+      except (CommsException, InvalidPacketReceived): 
         packet = None
         #print "No response..."
         pass
