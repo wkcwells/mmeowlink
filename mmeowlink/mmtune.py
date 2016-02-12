@@ -6,11 +6,16 @@ from mmeowlink.exceptions import CommsException,InvalidPacketReceived
 from mmeowlink.vendors.subg_rfspy_link import SubgRfspyLink
 
 class MMTune:
-  DEFAULT_FREQ = 916.630
+  FREQ_RANGES = {
+    'US': { 'start': 916.5, 'end': 916.9, 'default': 916.630 },
+    'WW': { 'start': 867.5, 'end': 868.5, 'default': 868.328 }
+  }
 
-  def __init__(self, link, pumpserial):
+  def __init__(self, link, pumpserial, locale='US'):
     self.link = link
     self.pumpserial = pumpserial
+    self.locale = locale
+    self.scan_range = self.FREQ_RANGES[self.locale]
 
   def run(self):
     ############################################################################
@@ -33,9 +38,10 @@ class MMTune:
     self.wakeup()
 
     #print "scanning..."
-    results = self.scan_over_freq(916.5, 916.9, 20)
+    results = self.scan_over_freq(self.scan_range['start'], self.scan_range['end'], 20)
     results_sorted = list(reversed(sorted(results, key=lambda x: x[1:])))
-    set_freq = self.DEFAULT_FREQ
+
+    set_freq = self.scan_range['default']
     used_default = True
     if results_sorted[0][1] > 0:
       used_default = False
@@ -102,7 +108,7 @@ class MMTune:
 
     if awake != True:
       # Pump in free space
-      self.link.set_base_freq(self.DEFAULT_FREQ)
+      self.link.set_base_freq(self.scan_range['default'])
 
       # Send 200 wake-up packets
       self.send_packet("a7" + self.pumpserial + "5d00", 200)
