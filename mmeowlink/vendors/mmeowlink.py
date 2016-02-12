@@ -74,6 +74,7 @@ class mmtune (medtronic.MedtronicTask):
   gets the best results on.
   """
   uart = None        # Unused attribute - but is required for OpenAPS
+  requires_session = False
 
   def setup_medtronic (self):
     setup_logging(self)
