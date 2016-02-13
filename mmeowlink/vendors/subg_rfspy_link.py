@@ -18,7 +18,6 @@ io  = logging.getLogger( )
 log = io.getChild(__name__)
 
 class SubgRfspyLink(SerialInterface):
-  TIMEOUT = 1
   REPETITION_DELAY = 0
   MAX_REPETITION_BATCHSIZE = 250
   FREQ_XTAL = 24000000
@@ -54,7 +53,10 @@ class SubgRfspyLink(SerialInterface):
 
     self.open()
 
-  def update_register(self, reg, value, timeout=1):
+  def update_register(self, reg, value, timeout=None):
+    if timeout is None:
+      timeout = self.timeout
+
     args = chr(reg) + chr(value)
     self.serial_rf_spy.do_command(self.serial_rf_spy.CMD_UPDATE_REGISTER, args, timeout=timeout)
 
@@ -71,8 +73,8 @@ class SubgRfspyLink(SerialInterface):
     self.serial_rf_spy.sync()
 
     # Check it's a SerialRfSpy device by retrieving the firmware version
-    self.serial_rf_spy.send_command(self.serial_rf_spy.CMD_GET_VERSION, timeout=1)
-    version = self.serial_rf_spy.get_response(timeout=1).split(' ')[1]
+    self.serial_rf_spy.send_command(self.serial_rf_spy.CMD_GET_VERSION, timeout=self.timeout)
+    version = self.serial_rf_spy.get_response(timeout=self.timeout).split(' ')[1]
 
     log.debug( 'serial_rf_spy Firmare version: %s' % version)
 
@@ -82,6 +84,9 @@ class SubgRfspyLink(SerialInterface):
   def write( self, string, repetitions=1, repetition_delay=0, timeout=None ):
     rf_spy = self.serial_rf_spy
 
+    if timeout is None:
+      timeout = self.timeout
+
     remaining_messages = repetitions
     while remaining_messages > 0:
       if remaining_messages < self.MAX_REPETITION_BATCHSIZE:
@@ -89,8 +94,6 @@ class SubgRfspyLink(SerialInterface):
       else:
         transmissions = self.MAX_REPETITION_BATCHSIZE
       remaining_messages = remaining_messages - transmissions
-
-      crc = CRC8.compute(string)
 
       message = chr(self.channel) + chr(transmissions - 1) + chr(repetition_delay) + FourBySix.encode(string)
 
@@ -122,11 +125,13 @@ class SubgRfspyLink(SerialInterface):
       rssi = (( rssi_dec - 256) / 2) - rssi_offset
     else:
       rssi = (rssi_dec / 2) - rssi_offset
-      
+
     sequence = resp[1]
 
     return {'rssi':rssi, 'sequence':sequence, 'data':decoded}
 
   def read( self, timeout=None ):
-    return self.get_packet(timeout)['data']
+    if timeout is None:
+      timeout = self.timeout
 
+    return self.get_packet(timeout)['data']

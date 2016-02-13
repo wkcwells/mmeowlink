@@ -87,7 +87,7 @@ class MMTune:
     buf.extend([CRC8.compute(buf)])
     self.link.write(buf, tx_count, msec_repeat_delay)
 
-  def get_packet(self, timeout=0):
+  def get_packet(self, timeout):
     return self.link.get_packet(timeout)
 
   def wakeup(self):

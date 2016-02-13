@@ -47,7 +47,7 @@ class SerialRfSpy:
     self.ser = ser
     self.buf = bytearray()
 
-  def do_command(self, command, param="", timeout=0):
+  def do_command(self, command, param="", timeout=1):
     self.send_command(command, param)
     return self.get_response(timeout=timeout)
 
@@ -60,7 +60,11 @@ class SerialRfSpy:
 
     self.ser.write_timeout = self.default_write_timeout
 
-  def get_response(self, timeout=0):
+  def get_response(self, timeout=1):
+    unless timeout > 0:
+      # We don't want infinite hangs for things, as it'll lock up the device
+      raise CommsException("Timeout cannot be zero or negative - coding error")
+
     start = time.time()
     while 1:
       bytesToRead = self.ser.inWaiting()
@@ -71,7 +75,7 @@ class SerialRfSpy:
         r = self.buf[:eop]
         del self.buf[:(eop+1)]
         return r
-      if (timeout > 0) and (start + timeout < time.time()):
+      if (start + timeout < time.time()):
         return bytearray()
       time.sleep(0.005)
 
