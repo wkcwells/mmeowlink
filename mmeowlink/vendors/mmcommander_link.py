@@ -6,9 +6,10 @@ import logging
 import time
 
 from decocare.lib import hexdump
-from .. exceptions import InvalidPacketReceived, CommsException, MMCommanderNotWriteable
-
+from openaps.exceptions import RetryableCommsException
 from serial_interface import SerialInterface
+
+from .. exceptions import UnableToCommunicateWithRadio, MMCommanderNotWriteable
 
 io  = logging.getLogger( )
 log = io.getChild(__name__)
@@ -38,7 +39,7 @@ class MMCommanderLink(SerialInterface):
     self.serial.write(chr(self.VERSION_FETCH_COMMAND))
     version = self.serial.read(1)
     if len(version) == 0:
-      raise CommsException("Could not get version from mmcommander device. Have you got the right port/device and radio_type?")
+      raise UnableToCommunicateWithRadio("Could not get version from mmcommander device. Have you got the right port/device and radio_type?")
 
   def write( self, string, repetitions=1, timeout=None ):
     if timeout is None:
@@ -72,7 +73,7 @@ class MMCommanderLink(SerialInterface):
 
       r = self.serial.write( arr.tostring() )
       if r != len(arr):
-        raise CommsException("Could not write to serial port - Tried to write %s bytes but only wrote %s" % (len(arr), r))
+        raise RetryableCommsException("Could not write to serial port - Tried to write %s bytes but only wrote %s" % (len(arr), r))
 
       io.info( 'usb.write.len: %s\n%s' % ( len( string ),
                                            hexdump( bytearray( string ) ) ) )
@@ -120,22 +121,22 @@ class MMCommanderLink(SerialInterface):
     while True:
       state = self.serial.read(1)
       if (state is None) or len(state) == 0:
-        raise CommsException("No response from pump after timeout %s seconds" % timeout)
+        raise RetryableCommsException("No response from pump after timeout %s seconds" % timeout)
 
       if ord(state) == 2:
         body_len = self.serial.read(1)
 
         if (body_len is None) or (len(body_len) == 0):
-          raise CommsException("Timeout reading length of response")
+          raise RetryableCommsException("Timeout reading length of response")
 
         # This is raised as a concern in the mmcommander code, so I
         # currently treat this as an error case
         if ord(body_len) > 74:
-          raise InvalidPacketReceived("Warning - received message > 74 chars")
+          raise RetryableCommsException("Warning - Invalid Packet Received - received message > 74 chars")
 
         message = self.serial.read(ord(body_len))
         if (message is None) or (len(message) == 0):
-          raise CommsException("Timeout reading message body")
+          raise RetryableCommsException("Timeout reading message body")
 
         return bytearray( message )
       else:

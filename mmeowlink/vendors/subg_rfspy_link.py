@@ -6,10 +6,11 @@ import binascii
 import logging
 import time
 
-from decocare.lib import hexdump, CRC8
+from decocare.lib import hexdump
+from openaps.exceptions import RetryableCommsException
 
 from .. fourbysix import FourBySix
-from .. exceptions import InvalidPacketReceived, CommsException, SubgRfspyVersionNotSupported
+from .. exceptions import SubgRfspyVersionNotSupported
 
 from serial_interface import SerialInterface
 from serial_rf_spy import SerialRfSpy
@@ -90,9 +91,10 @@ class SubgRfspyLink(SerialInterface):
         transmissions = self.MAX_REPETITION_BATCHSIZE
       remaining_messages = remaining_messages - transmissions
 
-      crc = CRC8.compute(string)
+      encoded = FourBySix.encode(string)
 
-      message = chr(self.channel) + chr(transmissions - 1) + chr(repetition_delay) + FourBySix.encode(string)
+      message = chr(self.channel) + chr(transmissions - 1) + chr(repetition_delay) + encoded
+      # print("WRITE: (%s / %d / %s):\n%s" % (self.channel, transmissions - 1, repetition_delay, hexdump(encoded)))
 
       rf_spy.do_command(rf_spy.CMD_SEND_PACKET, message, timeout=timeout)
 
@@ -107,14 +109,17 @@ class SubgRfspyLink(SerialInterface):
     timeout_ms_low = int(timeout_ms - (timeout_ms_high * 256))
 
     resp = rf_spy.do_command(SerialRfSpy.CMD_GET_PACKET, chr(self.channel) + chr(timeout_ms_high) + chr(timeout_ms_low), timeout=timeout + 1)
+    # print("GET_PACKET: (%s / %d):\n%s" % (self.channel, timeout, hexdump(resp)))
+
     if not resp:
-      raise CommsException("Did not get a response, or response is too short: %s" % len(resp))
+      raise RetryableCommsException("Did not get a response, or response is too short: %s" % len(resp))
 
     # If the length is less than or equal to 2, then it means we've received an error
     if len(resp) <= 2:
-      raise CommsException("Received an error response %s" % self.RFSPY_ERRORS[ resp[0] ])
+      raise RetryableCommsException("Received an error response %s" % self.RFSPY_ERRORS[ resp[0] ])
 
     decoded = FourBySix.decode(resp[2:])
+    # print("DECODED_PACKET:\n%s" % hexdump(decoded))
 
     rssi_dec = resp[0]
     rssi_offset = 73
@@ -122,11 +127,11 @@ class SubgRfspyLink(SerialInterface):
       rssi = (( rssi_dec - 256) / 2) - rssi_offset
     else:
       rssi = (rssi_dec / 2) - rssi_offset
-      
+
     sequence = resp[1]
+
 
     return {'rssi':rssi, 'sequence':sequence, 'data':decoded}
 
   def read( self, timeout=None ):
     return self.get_packet(timeout)['data']
-
