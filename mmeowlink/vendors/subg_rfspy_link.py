@@ -7,10 +7,9 @@ import logging
 import time
 
 from decocare.lib import hexdump
-from openaps.exceptions import RetryableCommsException
 
 from .. fourbysix import FourBySix
-from .. exceptions import SubgRfspyVersionNotSupported
+from .. exceptions import SubgRfspyVersionNotSupported, CommsException
 
 from serial_interface import SerialInterface
 from serial_rf_spy import SerialRfSpy
@@ -112,11 +111,11 @@ class SubgRfspyLink(SerialInterface):
     # print("GET_PACKET: (%s / %d):\n%s" % (self.channel, timeout, hexdump(resp)))
 
     if not resp:
-      raise RetryableCommsException("Did not get a response, or response is too short: %s" % len(resp))
+      raise CommsException("Did not get a response, or response is too short: %s" % len(resp))
 
     # If the length is less than or equal to 2, then it means we've received an error
     if len(resp) <= 2:
-      raise RetryableCommsException("Received an error response %s" % self.RFSPY_ERRORS[ resp[0] ])
+      raise CommsException("Received an error response %s" % self.RFSPY_ERRORS[ resp[0] ])
 
     decoded = FourBySix.decode(resp[2:])
     # print("DECODED_PACKET:\n%s" % hexdump(decoded))

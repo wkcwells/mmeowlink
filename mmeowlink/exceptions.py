@@ -1,3 +1,6 @@
+class CommsException(Exception):
+  pass
+
 class MMCommanderNotWriteable(Exception):
   pass
 

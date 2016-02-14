@@ -6,10 +6,9 @@ import logging
 import time
 
 from decocare.lib import hexdump
-from openaps.exceptions import RetryableCommsException
 from serial_interface import SerialInterface
 
-from .. exceptions import UnableToCommunicateWithRadio, MMCommanderNotWriteable
+from .. exceptions import UnableToCommunicateWithRadio, MMCommanderNotWriteable, CommsException
 
 io  = logging.getLogger( )
 log = io.getChild(__name__)
@@ -73,7 +72,7 @@ class MMCommanderLink(SerialInterface):
 
       r = self.serial.write( arr.tostring() )
       if r != len(arr):
-        raise RetryableCommsException("Could not write to serial port - Tried to write %s bytes but only wrote %s" % (len(arr), r))
+        raise CommsException("Could not write to serial port - Tried to write %s bytes but only wrote %s" % (len(arr), r))
 
       io.info( 'usb.write.len: %s\n%s' % ( len( string ),
                                            hexdump( bytearray( string ) ) ) )
@@ -121,22 +120,22 @@ class MMCommanderLink(SerialInterface):
     while True:
       state = self.serial.read(1)
       if (state is None) or len(state) == 0:
-        raise RetryableCommsException("No response from pump after timeout %s seconds" % timeout)
+        raise CommsException("No response from pump after timeout %s seconds" % timeout)
 
       if ord(state) == 2:
         body_len = self.serial.read(1)
 
         if (body_len is None) or (len(body_len) == 0):
-          raise RetryableCommsException("Timeout reading length of response")
+          raise CommsException("Timeout reading length of response")
 
         # This is raised as a concern in the mmcommander code, so I
         # currently treat this as an error case
         if ord(body_len) > 74:
-          raise RetryableCommsException("Warning - Invalid Packet Received - received message > 74 chars")
+          raise CommsException("Warning - Invalid Packet Received - received message > 74 chars")
 
         message = self.serial.read(ord(body_len))
         if (message is None) or (len(message) == 0):
-          raise RetryableCommsException("Timeout reading message body")
+          raise CommsException("Timeout reading message body")
 
         return bytearray( message )
       else:

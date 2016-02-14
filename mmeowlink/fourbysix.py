@@ -1,4 +1,4 @@
-from openaps.exceptions import RetryableCommsException
+from exceptions import CommsException
 
 class FourBySix (object):
   SYMBOLS = {
@@ -83,6 +83,6 @@ class FourBySix (object):
     try:
       data = bytearray(str(decoded_hex).decode('hex'))
     except TypeError as e:
-      raise RetryableCommsException("Error decoding FourBySix packet")
+      raise CommsException("Error decoding FourBySix packet")
 
     return data
