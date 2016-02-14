@@ -31,7 +31,9 @@
 import os
 import serial
 import time
-from .. exceptions import CommsException
+
+class SubgRfspyCommsError (Exception):
+  pass
 
 class SerialRfSpy:
   CMD_GET_STATE = 1
@@ -87,4 +89,4 @@ class SerialRfSpy:
       print "Version: " + version
 
     if not status or not version:
-      raise CommsException("Could not get subg_rfspy state or version. Have you got the right port/device and radio_type?")
+      raise SubgRfspyCommsError("Could not get subg_rfspy state or version. Have you got the right port/device and radio_type?")

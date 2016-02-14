@@ -5,7 +5,7 @@ import struct
 from datetime import datetime
 from decocare import lib
 
-from .. exceptions import InvalidPacketReceived
+from openaps.exceptions import RetryableCommsException
 
 _Packet = namedtuple('Packet', [
   'type', 'serial', 'op', 'payload', 'crc',
@@ -94,7 +94,7 @@ class Packet (_Packet):
       valid = calculated == crc
 
     if not valid:
-      raise InvalidPacketReceived
+      raise RetryableCommsException
 
     record = dict(date=stamp * 1000
            , dateString=dt.isoformat( )
