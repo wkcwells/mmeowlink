@@ -57,8 +57,7 @@ class Sender (object):
     if needs_params and not self.sent_params:
       return False
 
-    command_done_status = self.command.done( )
-    return command_done_status
+    return self.command.done( )
 
   def respond (self, resp):
     if resp.valid and resp.serial == self.command.serial:
