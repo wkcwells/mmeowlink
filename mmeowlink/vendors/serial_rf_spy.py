@@ -77,9 +77,16 @@ class SerialRfSpy:
 
   def sync(self):
     self.send_command(self.CMD_GET_STATE)
-    status = self.get_response(timeout=1)
+    status = self.get_response(timeout=2)   # Lengthened the timeout from 1 to 2, which seemed to help with errors
     if status == "OK":
       print "subg_rfspy status: " + status
+    else:
+      print "subg_rfspy fail status: " + status
+      # Try again.  This retry is required occasionally on the Edison and often on the Mac.
+      # Sometimes we get just a "K" (even on the second try), and sometimes we get nothing.
+      self.send_command(self.CMD_GET_STATE)
+      status = self.get_response(timeout=2)
+      print "subg_rfspy status 2: " + status
 
     self.send_command(self.CMD_GET_VERSION)
     version = self.get_response(timeout=1)
