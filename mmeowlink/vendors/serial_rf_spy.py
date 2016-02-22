@@ -78,7 +78,7 @@ class SerialRfSpy:
   def sync(self):
     self.send_command(self.CMD_GET_STATE)
     status = self.get_response(timeout=2)   # Lengthened the timeout from 1 to 2, which seemed to help with errors
-    if status == "OK":
+    if status == "OK" or status == "K":     # This happens frequently - at least on the mac
       print "subg_rfspy status: " + status
     else:
       print "subg_rfspy fail status: " + status
