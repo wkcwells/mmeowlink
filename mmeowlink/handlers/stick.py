@@ -3,12 +3,12 @@ from decocare import session, lib, commands
 from .. packets.rf import Packet
 from .. exceptions import InvalidPacketReceived, CommsException
 
-
-import logging
+import sys
 import time
 
-from decocare import lib
+import logging
 
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 io  = logging.getLogger( )
 log = io.getChild(__name__)
 

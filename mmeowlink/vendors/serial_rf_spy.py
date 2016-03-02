@@ -29,9 +29,16 @@
 
 
 import os
+import sys
 import serial
 import time
 from .. exceptions import CommsException
+
+import logging
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+io  = logging.getLogger( )
+log = io.getChild(__name__)
 
 class SerialRfSpy:
   CMD_GET_STATE = 1
@@ -60,8 +67,11 @@ class SerialRfSpy:
 
     self.ser.write_timeout = self.default_write_timeout
 
-  def get_response(self, timeout=0):
+  def get_response(self, timeout=5):
     start = time.time()
+    # print("Timeout: " + str(timeout) + " " + str(start))
+    if not timeout:
+      timeout = 10
     while 1:
       bytesToRead = self.ser.inWaiting()
       if bytesToRead > 0:
@@ -78,20 +88,24 @@ class SerialRfSpy:
   def sync(self):
     self.send_command(self.CMD_GET_STATE)
     status = self.get_response(timeout=2)   # Lengthened the timeout from 1 to 2, which seemed to help with errors
+    goodStatus = False
     if status == "OK" or status == "K":     # This happens frequently - at least on the mac
-      print "subg_rfspy status: " + status
+      log.info("subg_rfspy status: " + status)
+      goodStatus = True
     else:
-      print "subg_rfspy fail status: " + status
+      log.info("subg_rfspy fail status: " + status)
       # Try again.  This retry is required occasionally on the Edison and often on the Mac.
       # Sometimes we get just a "K" (even on the second try), and sometimes we get nothing.
       self.send_command(self.CMD_GET_STATE)
       status = self.get_response(timeout=2)
-      print "subg_rfspy status 2: " + status
+      log.info("subg_rfspy status 2: " + status)
+      if status == "OK" or status == "K":
+        goodStatus = True
 
     self.send_command(self.CMD_GET_VERSION)
     version = self.get_response(timeout=1)
     if len(version) >= 3:
-      print "Version: " + version
+      log.info("Version: " + version)
 
-    if not status or not version:
+    if not goodStatus or not version:
       raise CommsException("Could not get subg_rfspy state or version. Have you got the right port/device and radio_type?")

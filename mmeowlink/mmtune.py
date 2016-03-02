@@ -85,7 +85,7 @@ class MMTune:
     buf = bytearray()
     buf.extend(data.decode('hex'))
     buf.extend([CRC8.compute(buf)])
-    self.link.write(buf, tx_count, msec_repeat_delay)
+    self.link.write(buf, tx_count, msec_repeat_delay, timeout=2)
 
   def get_packet(self, timeout=0):
     return self.link.get_packet(timeout)
