@@ -38,7 +38,8 @@ class SubgRfspyLink(SerialInterface):
   REG_FREND0 = 0x1B
 
   # Which version of subg_rfspy do we support?
-  SUPPORTED_VERSIONS = ["0.6"]
+  UINT16_TIMEOUT_VERSIONS = ["0.6"]
+  SUPPORTED_VERSIONS = ["0.6", "0.7"]
 
   RFSPY_ERRORS = {
     0xaa: "Timeout",
@@ -76,6 +77,8 @@ class SubgRfspyLink(SerialInterface):
 
     log.debug( 'serial_rf_spy Firmare version: %s' % version)
 
+    self.uint16_timeout_width = version in self.UINT16_TIMEOUT_VERSIONS
+
     if version not in self.SUPPORTED_VERSIONS:
       raise SubgRfspyVersionNotSupported("Your subg_rfspy version (%s) is not in the supported version list: %s" % (version, "".join(self.SUPPORTED_VERSIONS)))
 
@@ -102,11 +105,18 @@ class SubgRfspyLink(SerialInterface):
     if timeout is None:
       timeout = self.timeout
 
-    timeout_ms = timeout * 1000
-    timeout_ms_high = int(timeout_ms / 256)
-    timeout_ms_low = int(timeout_ms - (timeout_ms_high * 256))
+    timeout_ms = int(timeout * 1000)
 
-    resp = rf_spy.do_command(SerialRfSpy.CMD_GET_PACKET, chr(self.channel) + chr(timeout_ms_high) + chr(timeout_ms_low), timeout=timeout + 1)
+    cmd_body = chr(self.channel)
+    if self.uint16_timeout_width:
+      timeout_ms_high = int(timeout_ms / 256)
+      timeout_ms_low = int(timeout_ms - (timeout_ms_high * 256))
+      cmd_body += chr(timeout_ms_high) + chr(timeout_ms_low)
+    else:
+      cmd_body += chr(timeout_ms >> 24) + chr((timeout_ms >> 16) & 0xff) + \
+        chr((timeout_ms >> 8) & 0xff) + chr(timeout_ms & 0xff)
+
+    resp = rf_spy.do_command(SerialRfSpy.CMD_GET_PACKET, cmd_body, timeout=timeout + 1)
     if not resp:
       raise CommsException("Did not get a response, or response is too short: %s" % len(resp))
 
@@ -122,11 +132,10 @@ class SubgRfspyLink(SerialInterface):
       rssi = (( rssi_dec - 256) / 2) - rssi_offset
     else:
       rssi = (rssi_dec / 2) - rssi_offset
-      
+
     sequence = resp[1]
 
     return {'rssi':rssi, 'sequence':sequence, 'data':decoded}
 
   def read( self, timeout=None ):
     return self.get_packet(timeout)['data']
-
