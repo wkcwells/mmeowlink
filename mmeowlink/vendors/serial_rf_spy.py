@@ -32,6 +32,10 @@ import os
 import serial
 import time
 from .. exceptions import CommsException
+import logging
+
+io  = logging.getLogger( )
+log = io.getChild(__name__)
 
 class SerialRfSpy:
   CMD_GET_STATE = 1
@@ -41,6 +45,10 @@ class SerialRfSpy:
   CMD_SEND_AND_LISTEN = 5
   CMD_UPDATE_REGISTER = 6
   CMD_RESET = 7
+
+  RFSPY_ERROR_TIMEOUT = 0xaa
+  RFSPY_ERROR_COMMAND_INTERRUPTED = 0xbb
+  RFSPY_ERROR_ZERO_DATA = 0xcc
 
   def __init__(self, ser):
     self.default_write_timeout = 1
@@ -55,23 +63,33 @@ class SerialRfSpy:
     self.ser.write_timeout = timeout
 
     self.ser.write(chr(command))
+    log.debug("command %d" % command)
     if len(param) > 0:
+      log.debug("params: %s" % str(param).encode('hex'))
       self.ser.write(param)
 
     self.ser.write_timeout = self.default_write_timeout
 
   def get_response(self, timeout=0):
+    log.debug("get_response: timeout = %s" % str(timeout))
     start = time.time()
     while 1:
       bytesToRead = self.ser.inWaiting()
       if bytesToRead > 0:
         self.buf.extend(self.ser.read(bytesToRead))
+        log.debug("buf = %s" % str(self.buf).encode('hex'))
       eop = self.buf.find(b'\x00',0)
       if eop >= 0:
         r = self.buf[:eop]
         del self.buf[:(eop+1)]
+        if len(r) == 0:
+          return bytearray()
+        if len(r) <= 2 and r[0] == self.RFSPY_ERROR_COMMAND_INTERRUPTED:
+          log.debug("response = command interrupted, getting the next response")
+          continue
         return r
       if (timeout > 0) and (start + timeout < time.time()):
+        log.debug("gave up waiting for response from subg_rfspy")
         return bytearray()
       time.sleep(0.005)
 
