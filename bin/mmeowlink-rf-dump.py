@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# PYTHON_ARGCOMPLETE_OK
 
 from mmeowlink.cli.rf_dump_app import RfDumpApp
 
