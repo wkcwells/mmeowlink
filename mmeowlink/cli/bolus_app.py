@@ -3,13 +3,13 @@
 
 from decocare import commands
 from decocare import lib
-from decocare.helpers.cli import CommandApp
+from base_mmeowlink_app import BaseMMeowlinkApp
 
 from mmeowlink.link_builder import LinkBuilder
 from mmeowlink.handlers.stick import Pump
 
 
-class BolusApp (CommandApp):
+class BolusApp (BaseMMeowlinkApp):
   """ %(prog)s - Send bolus command to a pump.
 
   XXX: Be careful please!
@@ -85,7 +85,3 @@ def fmt_params (args):
   if (args.strokes_per_unit > 10):
     return [lib.HighByte(strokes), lib.LowByte(strokes)]
   return [strokes]
-
-if __name__ == '__main__':
-  app = BolusApp( )
-  app.run(None)
