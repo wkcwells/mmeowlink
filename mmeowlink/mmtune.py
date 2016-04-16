@@ -11,11 +11,17 @@ class MMTune:
     'WW': { 'start': 867.5, 'end': 868.5, 'default': 868.328 }
   }
 
-  def __init__(self, link, pumpserial, locale='US'):
+  def __init__(self, link, pumpserial, radio_locale='US'):
     self.link = link
+
+    # MMTune can only be used with the SubgRfspy firmware, as MMCommander
+    # cannot change frequencies
+    assert type(link) == SubgRfspyLink
+
     self.pumpserial = pumpserial
-    self.locale = locale
-    self.scan_range = self.FREQ_RANGES[self.locale]
+    self.radio_locale = radio_locale
+
+    self.scan_range = self.FREQ_RANGES[self.radio_locale]
 
   def run(self):
 

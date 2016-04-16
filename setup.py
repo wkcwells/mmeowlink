@@ -10,6 +10,7 @@ setup(
     scripts = [
       'bin/mmeowlink-send.py',
       'bin/mmeowlink-bolus.py',
-      'bin/mmtune.py'
+      'bin/mmtune.py',
+      'bin/mmeowlink-rf-dump.py'
     ]
 )

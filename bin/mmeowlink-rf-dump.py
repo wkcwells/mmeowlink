@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-from mmeowlink.cli.bolus_app import BolusApp
+from mmeowlink.cli.rf_dump_app import RfDumpApp
 
 if __name__ == '__main__':
-  BolusApp().run(None)
+  RfDumpApp().run(None)
