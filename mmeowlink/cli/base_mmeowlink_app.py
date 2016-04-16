@@ -2,7 +2,6 @@
 module to send arbitrary pump messages.
 """
 
-# PYTHON_ARGCOMPLETE_OK
 from decocare.helpers import messages as decocare_messages
 from mmeowlink.handlers.stick import Pump
 from mmeowlink.link_builder import LinkBuilder
