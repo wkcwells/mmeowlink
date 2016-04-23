@@ -56,7 +56,7 @@ class SerialRfSpy:
     self.buf = bytearray()
 
   def do_command(self, command, param="", timeout=0):
-    self.send_command(command, param)
+    self.send_command(command, param, timeout=timeout)
     return self.get_response(timeout=timeout)
 
   def send_command(self, command, param="", timeout=1):

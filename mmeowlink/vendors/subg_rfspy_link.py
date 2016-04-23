@@ -141,6 +141,11 @@ class SubgRfspyLink(SerialInterface):
     if not resp:
       raise CommsException("Did not get a response, or response is too short: %s" % len(resp))
 
+    # In some cases the radio will respond with 'OK', which is an ack that the radio is responding,
+    # we treat this as a retryable Comms error so that the caller can deal with it
+    if len(resp) == 2 and resp == "OK":
+      raise CommsException("Received null/OK response")
+
     # If the length is less than or equal to 2, then it means we've received an error
     if len(resp) <= 2:
       raise CommsException("Received an error response %s" % self.RFSPY_ERRORS[ resp[0] ])
