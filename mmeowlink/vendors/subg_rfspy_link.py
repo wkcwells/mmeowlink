@@ -68,11 +68,14 @@ class SubgRfspyLink(SerialInterface):
   def check_setup(self):
     self.serial_rf_spy = SerialRfSpy(self.serial)
 
-    self.serial_rf_spy.sync()
+    version = self.serial_rf_spy.sync()
 
     # Check it's a SerialRfSpy device by retrieving the firmware version
-    self.serial_rf_spy.send_command(self.serial_rf_spy.CMD_GET_VERSION, timeout=1)
-    version = self.serial_rf_spy.get_response(timeout=1).split(' ')[1]
+    # self.serial_rf_spy.send_command(self.serial_rf_spy.CMD_GET_VERSION, timeout=1)
+    # response = self.serial_rf_spy.get_response(timeout=1)
+    # if (len(response) < 2):
+    #  raise CommsException("subg_rfspy get_version response invalid: " + str(response))
+    # version = response.split(' ')[1]
 
     log.debug( 'serial_rf_spy Firmare version: %s' % version)
 
@@ -112,7 +115,7 @@ class SubgRfspyLink(SerialInterface):
 
     # If the length is less than or equal to 2, then it means we've received an error
     if len(resp) <= 2:
-      raise CommsException("Received an error response %s" % self.RFSPY_ERRORS[ resp[0] ])
+      raise CommsException("Received an error response: %s" % self.RFSPY_ERRORS[ resp[0] ])
 
     decoded = FourBySix.decode(resp[2:])
 

@@ -87,7 +87,9 @@ class SerialRfSpy:
 
   def sync(self):
     self.send_command(self.CMD_GET_STATE)
-    status = self.get_response(timeout=2)   # Lengthened the timeout from 1 to 2, which seemed to help with errors
+    # Now lengthened to 4 to try to help with errors on the mac...
+    # Do we even need the second try any more??
+    status = self.get_response(timeout=4)   # Lengthened the timeout from 1 to 2, which seemed to help with errors
     goodStatus = False
     if status == "OK" or status == "K":     # This happens frequently - at least on the mac
       log.info("subg_rfspy status: " + status)
@@ -97,15 +99,17 @@ class SerialRfSpy:
       # Try again.  This retry is required occasionally on the Edison and often on the Mac.
       # Sometimes we get just a "K" (even on the second try), and sometimes we get nothing.
       self.send_command(self.CMD_GET_STATE)
-      status = self.get_response(timeout=2)
+      status = self.get_response(timeout=4)
       log.info("subg_rfspy status 2: " + status)
       if status == "OK" or status == "K":
         goodStatus = True
 
     self.send_command(self.CMD_GET_VERSION)
     version = self.get_response(timeout=1)
-    if len(version) >= 3:
-      log.info("Version: " + version)
+    versarray = version.split(' ');
+    log.info("Version: '" + version + "'")
 
-    if not goodStatus or not version:
+    if not goodStatus or not version or len(versarray) < 2:
       raise CommsException("Could not get subg_rfspy state or version. Have you got the right port/device and radio_type?")
+
+    return versarray[1];

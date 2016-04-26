@@ -9,6 +9,8 @@ import decocare
 import argparse
 import json
 from .. mmtune import MMTune
+from .. exceptions import CommsException
+
 from openaps.vendors import medtronic
 # from decocare import stick, session, link, commands, history
 from datetime import datetime
@@ -61,6 +63,8 @@ def setup_medtronic_link (self):
 
   link = LinkBuilder().build(radio_type, port)
   self.pump = Pump(link, serial)
+  if not self.pump:
+    raise CommsException("Could not create Pump() [need to be more specific]")
 
 import logging
 import logging.handlers
