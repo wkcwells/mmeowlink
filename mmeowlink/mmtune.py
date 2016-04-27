@@ -18,10 +18,11 @@ class MMTune:
     self.scan_range = self.FREQ_RANGES[self.locale]
 
   def run(self):
+
     ############################################################################
     # Commented these out as they may be causing issues with certain pumps:
     ############################################################################
-    # self.link.update_register(SubgRfspyLink.REG_MDMCFG4, 0xd9)
+    # self.link.update_register(SubgRfspyLink.REG_MDMCFG4, 0xa9)
     #
     # # Sometimes getting lower ber with 0x07 here (default is 0x03)
     # self.link.update_register(SubgRfspyLink.REG_AGCCTRL2, 0x07)

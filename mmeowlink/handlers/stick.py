@@ -4,6 +4,7 @@ from .. packets.rf import Packet
 from .. exceptions import InvalidPacketReceived, CommsException
 
 import sys
+import logging
 import time
 
 import logging
@@ -17,13 +18,11 @@ class Sender (object):
   RETRY_BACKOFF = 1
 
   sent_params = False
-  expected = 64
   def __init__ (self, link):
     self.link = link
     self.frames = [ ]
-
-  def send (self, payload):
-    self.link.write(payload)
+    self.ack_for_more_data = False
+    self.received_ack = False
 
   def send_params (self):
     command = self.command
@@ -35,25 +34,36 @@ class Sender (object):
     pkt = Packet.fromCommand(command, payload=payload, serial=command.serial)
     pkt = pkt.update(payload)
     buf = pkt.assemble( )
-    self.link.write(buf)
     self.sent_params = True
+    try:
+      buf = self.link.write_and_read(buf)
+      resp = Packet.fromBuffer(buf)
+      self.respond(resp)
+    except AttributeError:
+      self.link.write(buf)
 
-  def ack (self):
+  def ack (self, listen=False):
     null = bytearray([0x00])
     pkt = Packet.fromCommand(self.command, payload=null, serial=self.command.serial)
     pkt = pkt._replace(payload=null, op=0x06)
     buf = pkt.assemble( )
-    self.link.write(buf)
+    if listen:
+      buf = self.link.write_and_read(buf, timeout=0.1)
+      return Packet.fromBuffer(buf)
+    else:
+      self.link.write(buf)
 
   def unframe (self, resp):
-    if self.expected > 64:
+    if self.command.bytesPerRecord * self.command.maxRecords > 64:
+      self.ack_for_more_data = True
       num, payload = resp.payload[0], resp.payload[1:]
       self.frames.append((num, resp.payload))
-      self.ack( )
     else:
+      self.ack_for_more_data = False
       payload = resp.payload[1:]
 
     self.command.respond(payload)
+
 
   def done (self):
     needs_params = self.command.params and len(self.command.params) > 0 or False
@@ -63,30 +73,20 @@ class Sender (object):
 
   def respond (self, resp):
     if resp.valid and resp.serial == self.command.serial:
-      if resp.op == 0x06:
-        # if not self.command.done( ) or (self.command.params and not self.sent_params):
-        if not self.done( ):
-          return self.command
-        else:
-          return self.command
-      if resp.op == self.command.code:
-        # self.command.respond(resp.payload)
+      if resp.op == 0x06 and self.sent_params:
+        self.command.respond(bytearray(64)) 
+      elif resp.op == self.command.code:
         self.unframe(resp)
-        if self.done( ):
-          return self.command
-        else:
-          pass
 
   def wait_for_ack (self, timeout=.500):
     link = self.link
 
     while not self.done( ):
       buf = link.read( timeout=timeout )
-
       resp = Packet.fromBuffer(buf)
       if self.responds_to(resp):
         if resp.op == 0x06:
-          return resp
+          return
 
   def responds_to (self, resp):
     return resp.valid and resp.serial == self.command.serial
@@ -101,22 +101,37 @@ class Sender (object):
   def prelude (self):
     link = self.link
     command = self.command
-
-    self.expected = command.bytesPerRecord * command.maxRecords
+    log.debug("*** Sending prelude for command %d" % command.code)
 
     payload = bytearray([0])
     self.pkt = Packet.fromCommand(command, payload=payload, serial=command.serial)
     self.pkt = self.pkt.update(payload)
     buf = self.pkt.assemble( )
-    self.send(buf)
+    try:
+      buf = self.link.write_and_read(buf)
+      resp = Packet.fromBuffer(buf)
+      if self.responds_to(resp):
+        if resp.op == 0x06:
+          self.received_ack = True
+        else:
+          self.respond(resp)
+    except AttributeError:
+      self.link.write(buf)
 
   def upload (self):
     params = self.command.params
+    log.debug("len(params)  == %d" % len(params))
 
     should_send = len(params) > 0
     if should_send:
-      self.wait_for_ack( )
+      if not self.received_ack:
+        self.wait_for_ack( )
       self.send_params( )
+
+  def restart_command( self ):
+    # This is a bit of a hack; would be nice if decocare explicitly supported a command reset
+    self.command.data = bytearray()
+    self.command.responded = False
 
   def __call__ (self, command):
     self.command = command
@@ -127,15 +142,24 @@ class Sender (object):
         self.upload()
 
         while not self.done( ):
-          resp = self.wait_response( )
+          if self.ack_for_more_data:
+            try:
+              resp = self.ack(listen=True)
+            except AttributeError:
+              self.ack(listen=False)
+              resp = self.wait_response( )
+          else:
+            resp = self.wait_response( )
           if resp:
             self.respond(resp)
 
         return command
       except InvalidPacketReceived as e:
-        log.error("Invalid Packet Received - '%s' - retrying: %s of %s" % (e, retry_count, self.STANDARD_RETRY_COUNT))
+        log.error("Invalid Packet Received - '%s' - retrying: %s of %s" % (e, retry_count+1, self.STANDARD_RETRY_COUNT))
+        self.restart_command()
       except CommsException as e:
-        log.error("Timed out or other comms error - %s - retrying: %s of %s" % (e, retry_count, self.STANDARD_RETRY_COUNT))
+        log.error("Timed out or other comms error - %s - retrying: %s of %s" % (e, retry_count+1, self.STANDARD_RETRY_COUNT))
+        self.restart_command()
       time.sleep(self.RETRY_BACKOFF * retry_count)
 
 class Repeater (Sender):
@@ -145,7 +169,7 @@ class Repeater (Sender):
 
     pkt = Packet.fromCommand(self.command, serial=self.command.serial)
     buf = pkt.assemble( )
-    log.info('Sending repeated message %s' % (str(buf).encode('hex')))
+    log.debug('Sending repeated message %s' % (str(buf).encode('hex')))
 
     self.link.write(buf, repetitions=repetitions)
 
