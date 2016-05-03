@@ -11,11 +11,17 @@ class MMTune:
     'WW': { 'start': 867.5, 'end': 868.5, 'default': 868.328 }
   }
 
-  def __init__(self, link, pumpserial, locale='US'):
+  def __init__(self, link, pumpserial, radio_locale='US'):
     self.link = link
+
+    # MMTune can only be used with the SubgRfspy firmware, as MMCommander
+    # cannot change frequencies
+    assert type(link) == SubgRfspyLink
+
     self.pumpserial = pumpserial
-    self.locale = locale
-    self.scan_range = self.FREQ_RANGES[self.locale]
+    self.radio_locale = radio_locale
+
+    self.scan_range = self.FREQ_RANGES[self.radio_locale]
 
   def run(self):
 
@@ -82,13 +88,13 @@ class MMTune:
       cur_freq += step_size
     return results
 
-  def send_packet(self, data, tx_count=1, msec_repeat_delay=0):
+  def send_packet(self, data, repetitions=1, repetition_delay=0, timeout=1):
     buf = bytearray()
     buf.extend(data.decode('hex'))
     buf.extend([CRC8.compute(buf)])
-    self.link.write(buf, tx_count, msec_repeat_delay)
+    self.link.write(buf, repetitions=repetitions, repetition_delay=repetition_delay, timeout=timeout)
 
-  def get_packet(self, timeout=0):
+  def get_packet(self, timeout):
     return self.link.get_packet(timeout)
 
   def wakeup(self):
@@ -112,7 +118,7 @@ class MMTune:
       self.link.set_base_freq(self.scan_range['default'])
 
       # Send 200 wake-up packets
-      self.send_packet("a7" + self.pumpserial + "5d00", 200)
+      self.send_packet("a7" + self.pumpserial + "5d00", repetitions=200, timeout=4.5)
       try:
         wake_ack = self.get_packet(9) # wait 9 s for response
       except (CommsException, InvalidPacketReceived):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-from mmeowlink.cli.mmtune_app import MMTuneApp
+from mmeowlink.cli.rf_dump_app import RfDumpApp
 
 if __name__ == '__main__':
-  MMTuneApp().run(None)
+  RfDumpApp().run(None)

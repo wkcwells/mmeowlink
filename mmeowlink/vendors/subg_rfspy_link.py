@@ -18,7 +18,6 @@ io  = logging.getLogger( )
 log = io.getChild(__name__)
 
 class SubgRfspyLink(SerialInterface):
-  TIMEOUT = 1
   REPETITION_DELAY = 0
   MAX_REPETITION_BATCHSIZE = 250
   FREQ_XTAL = 24000000
@@ -87,7 +86,7 @@ class SubgRfspyLink(SerialInterface):
 
     if timeout == None:
       timeout = 0.5
-    
+
     timeout_ms = int(timeout * 1000)
 
 
@@ -121,6 +120,9 @@ class SubgRfspyLink(SerialInterface):
   def write( self, string, repetitions=1, repetition_delay=0, timeout=None ):
     rf_spy = self.serial_rf_spy
 
+    if timeout is None:
+      timeout = self.timeout
+
     remaining_messages = repetitions
     while remaining_messages > 0:
       if remaining_messages < self.MAX_REPETITION_BATCHSIZE:
@@ -138,6 +140,11 @@ class SubgRfspyLink(SerialInterface):
   def handle_response( self, resp ):
     if not resp:
       raise CommsException("Did not get a response, or response is too short: %s" % len(resp))
+
+    # In some cases the radio will respond with 'OK', which is an ack that the radio is responding,
+    # we treat this as a retryable Comms error so that the caller can deal with it
+    if len(resp) == 2 and resp == "OK":
+      raise CommsException("Received null/OK response")
 
     # If the length is less than or equal to 2, then it means we've received an error
     if len(resp) <= 2:
@@ -177,4 +184,7 @@ class SubgRfspyLink(SerialInterface):
     return self.handle_response(resp)
 
   def read( self, timeout=None ):
+    if timeout is None:
+      timeout = self.timeout
+
     return self.get_packet(timeout)['data']
