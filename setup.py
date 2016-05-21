@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='mmeowlink',
-    version='0.7.1',
+    version='0.8.1',
     description='Driver layer for communicating with Medtronic pumps over a variety of radios',
     packages=find_packages(),
     include_package_data=True,
@@ -18,10 +18,10 @@ setup(
       'pyserial'
     ],
     scripts = [
-      'bin/mmeowlink-send.py',
       'bin/mmeowlink-bolus.py',
-      'bin/mmtune.py',
-      'bin/mmeowlink-rf-dump.py'
+      'bin/mmeowlink-rf-dump.py',
+      'bin/mmeowlink-send.py',
+      'bin/mmtune.py'
     ],
     classifiers = [
       'Development Status :: 3 - Alpha',
