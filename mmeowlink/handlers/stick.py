@@ -9,7 +9,7 @@ import time
 
 import logging
 
-logging.basicConfig(stream=sys.stdout, level=logging.WARNING)
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 io  = logging.getLogger( )
 log = io.getChild(__name__)
 
@@ -42,10 +42,11 @@ class Sender (object):
     except AttributeError:
       self.link.write(buf)
 
-  def ack (self, listen=False):
+  def ack (self, listen=False, nak=False):
     null = bytearray([0x00])
     pkt = Packet.fromCommand(self.command, payload=null, serial=self.command.serial)
-    pkt = pkt._replace(payload=null, op=0x06)
+    ack_nak = 0x15 if nak else 0x06   # Thanks to Thanks to https://github.com/ecc1/medtronic/blob/master/command.go#L47
+    pkt = pkt._replace(payload=null, op=ack_nak)
     buf = pkt.assemble( )
     if listen:
       buf = self.link.write_and_read(buf, timeout=0.1)
@@ -156,11 +157,20 @@ class Sender (object):
         return command
       except InvalidPacketReceived as e:
         log.error("Invalid Packet Received - '%s' - retrying: %s of %s" % (e, retry_count+1, self.STANDARD_RETRY_COUNT))
-        self.restart_command()
+        if (retry_count >= self.STANDARD_RETRY_COUNT-1):
+          raise InvalidPacketReceived("*** Invalid pump packet received: " + str(e))    # Needs testing
+        else:
+          # self.restart_command()
       except CommsException as e:
         log.error("Timed out or other comms error - %s - retrying: %s of %s" % (e, retry_count+1, self.STANDARD_RETRY_COUNT))
-        self.restart_command()
+        if (retry_count >= self.STANDARD_RETRY_COUNT-1):
+          raise CommsException("*** Pump comm error: " + str(e))                        # Needs testing - pyloop has some special processing for this exception
+          #  Note this avoids the final timeout wait as a beneficia side effect
+        else:
+          # self.restart_command()
+
       time.sleep(self.RETRY_BACKOFF * retry_count)
+
 
 class Repeater (Sender):
 
@@ -203,11 +213,13 @@ class Pump (session.Pump):
 
   def execute (self, command):
     command.serial = self.serial
+    sender = Sender(self.link)
+    return sender(command)
 
-    for retry_count in range(self.STANDARD_RETRY_COUNT):
-      try:
-          sender = Sender(self.link)
-          return sender(command)
-      except (CommsException, AssertionError) as e:
-          log.error("Timed out or other comms exception - %s - retrying: %s of %s" % (e, retry_count, self.STANDARD_RETRY_COUNT))
-          time.sleep(self.RETRY_BACKOFF * retry_count)
+    # for retry_count in range(self.STANDARD_RETRY_COUNT):
+    #   try:
+    #       sender = Sender(self.link)
+    #       return sender(command)
+    #   except (CommsException, AssertionError) as e:
+    #       log.error("Timed out or other comms exception - %s - retrying: %s of %s" % (e, retry_count, self.STANDARD_RETRY_COUNT))
+    #       time.sleep(self.RETRY_BACKOFF * retry_count)

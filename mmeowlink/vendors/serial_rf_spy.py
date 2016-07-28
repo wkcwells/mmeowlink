@@ -40,7 +40,7 @@ log = io.getChild(__name__)
 
 import logging
 
-logging.basicConfig(stream=sys.stdout, level=logging.WARNING)
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 io  = logging.getLogger( )
 log = io.getChild(__name__)
 
