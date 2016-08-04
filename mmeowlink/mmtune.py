@@ -7,39 +7,28 @@ from mmeowlink.vendors.subg_rfspy_link import SubgRfspyLink
 
 class MMTune:
   FREQ_RANGES = {
-    'US': { 'start': 916.5, 'end': 916.9, 'default': 916.630 },
-    'WW': { 'start': 867.5, 'end': 868.5, 'default': 868.328 }
+    'US': { 'start': 916.300, 'end': 916.900, 'default': 916.630 },
+    'WW': { 'start': 868.150, 'end': 868.750, 'default': 868.328 }
   }
 
-  def __init__(self, link, pumpserial, locale='US'):
+  def __init__(self, link, pumpserial, radio_locale='US'):
     self.link = link
+
+    # MMTune can only be used with the SubgRfspy firmware, as MMCommander
+    # cannot change frequencies
+    assert type(link) == SubgRfspyLink
+
     self.pumpserial = pumpserial
-    self.locale = locale
-    self.scan_range = self.FREQ_RANGES[self.locale]
+    self.radio_locale = radio_locale
+
+    self.scan_range = self.FREQ_RANGES[self.radio_locale]
 
   def run(self):
-
-    ############################################################################
-    # Commented these out as they may be causing issues with certain pumps:
-    ############################################################################
-    # self.link.update_register(SubgRfspyLink.REG_MDMCFG4, 0xa9)
-    #
-    # # Sometimes getting lower ber with 0x07 here (default is 0x03)
-    # self.link.update_register(SubgRfspyLink.REG_AGCCTRL2, 0x07)
-    #
-    # self.link.update_register(SubgRfspyLink.REG_AGCCTRL1, 0x40)
-    #
-    # # With rx bw > 101kzHZ, this should be 0xB6, otherwise 0x56
-    # self.link.update_register(SubgRfspyLink.REG_FREND1, 0x56)
-    #
-    # # default (0x91) seems to work best
-    # #self.link.update_register(SubgRfspyLink.REG_AGCCTRL0, 0x91)
-
     #print "waking..."
     self.wakeup()
 
     #print "scanning..."
-    results = self.scan_over_freq(self.scan_range['start'], self.scan_range['end'], 20)
+    results = self.scan_over_freq(self.scan_range['start'], self.scan_range['end'], 25)
     results_sorted = list(reversed(sorted(results, key=lambda x: x[1:])))
 
     set_freq = self.scan_range['default']
@@ -82,13 +71,13 @@ class MMTune:
       cur_freq += step_size
     return results
 
-  def send_packet(self, data, tx_count=1, msec_repeat_delay=0):
+  def send_packet(self, data, repetitions=1, repetition_delay=0, timeout=1):
     buf = bytearray()
     buf.extend(data.decode('hex'))
     buf.extend([CRC8.compute(buf)])
-    self.link.write(buf, tx_count, msec_repeat_delay, timeout=2)
+    self.link.write(buf, repetitions=repetitions, repetition_delay=repetition_delay, timeout=timeout) # KW: set the timeout to 2 for some reason - probably mac
 
-  def get_packet(self, timeout=0):
+  def get_packet(self, timeout):
     return self.link.get_packet(timeout)
 
   def wakeup(self):
@@ -112,7 +101,7 @@ class MMTune:
       self.link.set_base_freq(self.scan_range['default'])
 
       # Send 200 wake-up packets
-      self.send_packet("a7" + self.pumpserial + "5d00", 200)
+      self.send_packet("a7" + self.pumpserial + "5d00", repetitions=200, timeout=4.5)
       try:
         wake_ack = self.get_packet(9) # wait 9 s for response
       except (CommsException, InvalidPacketReceived):

@@ -2,6 +2,9 @@
 """
 mmeowlink - openaps driver for cc1111/cc1110 devices
 """
+import logging
+import logging.handlers
+
 from openaps.uses.use import Use
 from openaps.uses.registry import Registry
 from openaps.configurable import Configurable
@@ -49,14 +52,21 @@ use = Registry( )
 
 def setup_logging (self):
   log = logging.getLogger(decocare.__name__)
-  level = getattr(logging, self.device.get('logLevel', 'WARN'))
+  mmlog = logging.getLogger('mmeowlink')
+  level = getattr(logging, self.device.get('DECOCARE_LOG_LEVEL', 'WARN'))
+  mmlevel = getattr(logging, self.device.get('logLevel', 'INFO'))
   address = self.device.get('logAddress', '/dev/log')
   log.setLevel(level)
+  mmlog.setLevel(mmlevel)
   for previous in log.handlers[:]:
     log.removeHandler(previous)
+  for previous in mmlog.handlers[:]:
+    mmlog.removeHandler(previous)
   log.addHandler(logging.handlers.SysLogHandler(address=address))
+  mmlog.addHandler(logging.handlers.SysLogHandler(address=address))
 
 def setup_medtronic_link (self):
+  setup_logging(self)
   serial = self.device.get('serial')
   radio_type = self.device.get('radio_type')
   port = self.device.get('port')
@@ -69,8 +79,6 @@ def setup_medtronic_link (self):
   if not self.pump:
     raise CommsException("Could not create Pump() [need to be more specific]")
 
-import logging
-import logging.handlers
 
 @use( )
 class mmtune (medtronic.MedtronicTask):
@@ -84,7 +92,7 @@ class mmtune (medtronic.MedtronicTask):
   requires_session = False
 
   def setup_medtronic (self):
-    setup_logging(self)
+    # setup_logging(self)
     setup_medtronic_link(self)
     serial = self.device.get('serial')
     self.mmtune = MMTune(self.pump.link, serial)
@@ -94,7 +102,7 @@ class mmtune (medtronic.MedtronicTask):
 
 class MedtronicTask (medtronic.MedtronicTask):
   def setup_medtronic (self):
-    setup_logging(self)
+    # setup_logging(self)
     setup_medtronic_link(self)
     return
 

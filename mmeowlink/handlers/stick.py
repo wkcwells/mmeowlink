@@ -75,7 +75,7 @@ class Sender (object):
   def respond (self, resp):
     if resp.valid and resp.serial == self.command.serial:
       if resp.op == 0x06 and self.sent_params:
-        self.command.respond(bytearray(64)) 
+        self.command.respond(bytearray(64))
       elif resp.op == self.command.code:
         self.unframe(resp)
 
@@ -174,26 +174,38 @@ class Sender (object):
 
 class Repeater (Sender):
 
-  def __call__ (self, command, repetitions=None, ack_wait_seconds=None, retry_count=None):
+  def __call__ (self, command, repetitions=None, ack_wait_seconds=None):
     self.command = command
 
+    start = time.time()
     pkt = Packet.fromCommand(self.command, serial=self.command.serial)
     buf = pkt.assemble( )
     log.debug('Sending repeated message %s' % (str(buf).encode('hex')))
 
     self.link.write(buf, repetitions=repetitions)
 
+    # The radio takes a while to send all the packets, so wait for a bit before
+    # trying to talk to the radio, otherwise we can interrupt it.
+    #
+    # This multiplication factor is based on
+    # testing, which shows that it takes 8.04 seconds to send 500 packets
+    # (8.04/500 =~ 0.016 packets per second).
+    # We don't want to miss the reply, so take off a bit:
+    time.sleep((repetitions * 0.016) - 2.2)
+
     # Sometimes the first packet received will be mangled by the simultaneous
     # transmission of a CGMS and the pump. We thus retry on invalid packets
     # being received. Note how ever that we do *not* retry on timeouts, since
     # our wait period is typically very long here, which would lead to long
     # waits with no activity. It's better to fail and retry externally
-    for retry_count in range(retry_count):
+    while (time.time() <= start + ack_wait_seconds):
       try:
-        self.wait_for_ack(timeout=ack_wait_seconds)
+        self.wait_for_ack()
         return True
-      except InvalidPacketReceived:
-        log.error("Invalid Packet Received - retrying: %s of %s" % (retry_count, self.STANDARD_RETRY_COUNT))
+      except CommsException, InvalidPacketReceived:
+        log.error("Response not received - retrying at %s" % time.time)
+
+    return False
 
 class Pump (session.Pump):
   STANDARD_RETRY_COUNT = 3
@@ -209,7 +221,12 @@ class Pump (session.Pump):
     self.command = commands.PowerControl(**dict(minutes=minutes, serial=self.serial))
     repeater = Repeater(self.link)
 
-    repeater(self.command, repetitions=500, ack_wait_seconds=15, retry_count=2)
+    status = repeater(self.command, repetitions=500, ack_wait_seconds=20)
+
+    if status:
+      return True
+    else:
+      raise CommsException("No acknowledgement from pump on wakeup. Is it out of range or is the battery too low?")
 
   def execute (self, command):
     command.serial = self.serial
