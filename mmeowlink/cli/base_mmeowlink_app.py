@@ -15,6 +15,7 @@ class BaseMMeowlinkApp(decocare_messages.SendMsgApp):
     parser.add_argument('--radio_type', dest='radio_type', default='subg_rfspy', choices=['mmcommander', 'subg_rfspy'])
     parser.add_argument('--mmcommander', dest='radio_type', action='store_const', const='mmcommander')
     parser.add_argument('--subg_rfspy', dest='radio_type', action='store_const', const='subg_rfspy')
+    parser.add_argument('--freq', dest='frequency', action='store')
 
     return parser
 
@@ -36,7 +37,7 @@ class BaseMMeowlinkApp(decocare_messages.SendMsgApp):
 
     if not args.autoinit:
       if args.init:
-        self.pump.power_control(minutes=args.session_life)
+        self.pump.power_control(minutes=args.session_life)    # KW Note: this now returns the pump model number!!
     else:
       self.autoinit(args)
 
