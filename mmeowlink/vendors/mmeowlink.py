@@ -55,7 +55,7 @@ def setup_logging (self):
   mmlog = logging.getLogger('mmeowlink')
   level = getattr(logging, self.device.get('DECOCARE_LOG_LEVEL', 'WARN'))
   mmlevel = getattr(logging, self.device.get('logLevel', 'INFO'))
-  address = self.device.get('logAddress', '/dev/log')
+  address = self.device.get('log_address', '/dev/log')    # Needs to be fixed in decocare as well I think
   log.setLevel(level)
   mmlog.setLevel(mmlevel)
   for previous in log.handlers[:]:
@@ -75,7 +75,14 @@ def setup_medtronic_link (self):
     port = builder.scan( )
 
   link = builder.build(radio_type, port)
-  self.pump = Pump(link, serial)
+
+  if Pump.pump is not None:
+    print("USING EXISTING (GLOBAL) PUMP OBJECT")    # TODO KW: It's complicated to use a "log" for this because I am not sure of this file's status as a class
+    Pump.pump.link = link     # Terribly hacky.... this is necessary because the "link" is created and opened not as part of pump.__init__ but as part of mmeowlink.py setup_medtronic.  The layering is awful...
+    # Assume serial stays the same...
+  else:
+    Pump.pump = Pump(link, serial)
+  self.pump = Pump.pump
   if not self.pump:
     raise CommsException("Could not create Pump() [need to be more specific]")
 
@@ -85,7 +92,7 @@ class mmtune (medtronic.MedtronicTask):
   """ Scan for best frequency
 
   This will attempt to communicate with the pump at a range
-  of frequencies, and set your radio to the frequency it 
+  of frequencies, and set your radio to the frequency it
   gets the best results on.
   """
   uart = None        # Unused attribute - but is required for OpenAPS

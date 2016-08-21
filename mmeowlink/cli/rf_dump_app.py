@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from .. hex_handling import hexify
-from .. exceptions import CommsException
+from .. exceptions import CommsException, InvalidPacketReceived
 
 from mmeowlink.vendors.mmcommander_link import MMCommanderLink
 from mmeowlink.vendors.subg_rfspy_link import SubgRfspyLink
