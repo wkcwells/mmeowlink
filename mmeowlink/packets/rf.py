@@ -94,7 +94,7 @@ class Packet (_Packet):
       valid = calculated == crc
 
     if not valid:
-      raise InvalidPacketReceived("Bad packet CRC")
+      raise InvalidPacketReceived("Bad packet CRC: calculated: 0x%x, expected: 0x%x", (calculated, crc))
 
     record = dict(date=stamp * 1000
            , dateString=dt.isoformat( )
@@ -111,5 +111,6 @@ class Packet (_Packet):
            # , op=str(rfpacket[0:1]).encode('hex')
            # , decocare_hex=msg
            )
+    print("Packet payload hex: " + record['payload_hex'])
     pkt = klass(**record)
     return pkt
