@@ -57,13 +57,13 @@ class Sender (object):
 
   # Adds a frame (or frames ?) to the received response
   def unframe (self, resp):
+    payload = resp.payload[1:]
     if self.command.bytesPerRecord * self.command.maxRecords > 64:
       self.ack_for_more_data = True
-      num, payload = resp.payload[0], resp.payload[1:]
+      num = resp.payload[0]
       self.frames.append((num, resp.payload))
     else:
       self.ack_for_more_data = False
-      payload = resp.payload[1:]
 
     self.command.respond(payload)
 
@@ -122,11 +122,11 @@ class Sender (object):
         else:
           self.respond(resp)
     except AttributeError as e:
-      log.warning("AttributeError exception in mmeowlink.stick.prelude - %s." % str(e))
+      log.error("AttributeError exception in mmeowlink.stick.prelude - %s." % str(e))
       self.link.write(buf)      # Why do this? Kinda strange?
     except Exception as e:
       log.error("Exception in mmeowlink.stick.prelude - %s." % str(e))
-      # KW: we should raise here
+      raise (CommsException("Exception in mmeowlink.stick.prelude - %s." % str(e)))  # Kind of a hack for now
 
   def upload (self):
     params = self.command.params
@@ -160,10 +160,15 @@ class Sender (object):
         while not self.done( ):
           if self.ack_for_more_data:
             try:
-              resp = self.ack(listen=True)
-              packets_received += 1
-              nak_attempts = 0
-              log.warning("Ack loop: %s of %s packets received" % (packets_received, self.command.maxRecords))
+              if nak_attempts == 0:   # Force NAK the first time
+                self.ack(listen=False, nak=True)
+                nak_attempts += 1
+                resp = self.wait_response()
+              else:
+                resp = self.ack(listen=True)
+                packets_received += 1
+                nak_attempts = 0
+                log.warning("Ack loop: %s of %s packets received" % (packets_received, self.command.maxRecords))
             except AttributeError:      # Need to understand this better...  Looks unnecessary
               log.warning("AttributeError exception sending ack.")
               self.ack(listen=False)
