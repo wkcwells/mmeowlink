@@ -2,21 +2,20 @@
 module to send arbitrary pump messages.
 """
 
-# PYTHON_ARGCOMPLETE_OK
-from decocare.helpers import messages
+from decocare.helpers import messages as decocare_messages
 from mmeowlink.handlers.stick import Pump
 from mmeowlink.link_builder import LinkBuilder
 import argcomplete
 
-class SendMsgApp (messages.SendMsgApp):
+class BaseMMeowlinkApp(decocare_messages.SendMsgApp):
   """
-  mmeowlink adapter to decocare's SendMsgApp
+  Base class used by other apps here
   """
-  def customize_parser (self, parser):
+  def configure_radio_params(self, parser):
     parser.add_argument('--radio_type', dest='radio_type', default='subg_rfspy', choices=['mmcommander', 'subg_rfspy'])
     parser.add_argument('--mmcommander', dest='radio_type', action='store_const', const='mmcommander')
     parser.add_argument('--subg_rfspy', dest='radio_type', action='store_const', const='subg_rfspy')
-    parser = super(SendMsgApp, self).customize_parser(parser)
+
     return parser
 
   def prelude (self, args):
@@ -29,15 +28,19 @@ class SendMsgApp (messages.SendMsgApp):
     # get link
     # drain rx buffer
     self.pump = Pump(self.link, args.serial)
+
+    # Early return if we don't want to send any radio comms. Useful from both
+    # the command line and for MMTuneApp
     if args.no_rf_prelude:
       return
+
     if not args.autoinit:
       if args.init:
         self.pump.power_control(minutes=args.session_life)
     else:
       self.autoinit(args)
-    self.sniff_model( )
 
-  def postlude (self, args):
-    # self.link.close( )
+    self.sniff_model()
+
+  def postlude(self, args):
     return
