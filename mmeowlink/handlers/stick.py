@@ -199,32 +199,71 @@ class Repeater (Sender):
 
 class Pump (session.Pump):
   STANDARD_RETRY_COUNT = 3
-  STANDARD_RETRY_BACKOFF = 1
+  MAX_SESSION_DURATION = 5      # Time in minutes before trying the pump wakeup sequence again
+
+  pump = None   # Attempt to cache the pump object
 
   def __init__ (self, link, serial):
     self.link = link
     self.serial = serial
+    self.last_command_time = 0     # Time of the last command in seconds
+
+  def set_last_command_time(self, time):
+    self.last_command_time = time
+
+  def get_model(self):    # Duplicates code elsewhere - see session.py in decocare
+    self.command = commands.ReadPumpModel(**dict(serial=self.serial))    # Don't know that we need to setup the dict this way - don't think minutes is required - is serial?
+    sender = Sender(self.link)          # would like to try this just once??
+    single_status = False
+    try:
+      single_status = sender(self.command, timeout=2, retries=1)
+    except CommsException as e:
+      log.warning("Exception raised on single wake up transmission: %s" % str(e))
+    if single_status:     # Cane this be false or None with no exception?  If not, just move the 'return True' up to after the send
+      return self.command.getData();
+      return model
+    else:
+      # Else pump is not awake??  is this possible? Or will it always raise exception?
+      print("DO WE EVER GET HERE?")  # Yes we were but that may have just been a bug from when I changed the retry logic
+
+
 
   def power_control (self, minutes=None):
-    """ Control Pumping """
-    log.info('BEGIN POWER CONTROL %s' % self.serial)
-    self.command = commands.PowerControl(**dict(minutes=minutes, serial=self.serial))
+    """ Control Pumping """   # Bad comment
+    log.warning('BEGIN POWER CONTROL %s' % self.serial)
+
+    current_time = time.time()
+    if current_time < self.last_command_time + (60 * self.MAX_SESSION_DURATION):
+      log.warning("Power control: Expecting that pump is still awake.")
+      return self.model
+
+    model = self.get_model()
+    if model is not None:
+      log.warning("Pump is already awake.  Model = " + model)
+      return model
+
+    self.command = commands.PowerControl(**dict(minutes=minutes, serial=self.serial))    # Don't know that we need to setup the dict this way - just legacy
     repeater = Repeater(self.link)
 
     status = repeater(self.command, repetitions=500, ack_wait_seconds=20)
 
     if status:
-      return True
+      model = self.get_model()
+      if model is not None:
+        return model
+      # Else what?
     else:
       raise CommsException("No acknowledgement from pump on wakeup. Is it out of range or is the battery too low?")
 
   def execute (self, command):
     command.serial = self.serial
+    sender = Sender(self.link)
+    return sender(command)
 
-    for retry_count in range(self.STANDARD_RETRY_COUNT):
-      try:
-          sender = Sender(self.link)
-          return sender(command)
-      except (CommsException, AssertionError) as e:
-          log.error("Timed out or other comms exception - %s - retrying: %s of %s" % (e, retry_count, self.STANDARD_RETRY_COUNT))
-          time.sleep(self.RETRY_BACKOFF * retry_count)
+    # for retry_count in range(self.STANDARD_RETRY_COUNT):
+    #   try:
+    #       sender = Sender(self.link)
+    #       return sender(command)
+    #   except (CommsException, AssertionError) as e:
+    #       log.error("Timed out or other comms exception - %s - retrying: %s of %s" % (e, retry_count, self.STANDARD_RETRY_COUNT))
+    #       time.sleep(self.RETRY_BACKOFF * retry_count)
