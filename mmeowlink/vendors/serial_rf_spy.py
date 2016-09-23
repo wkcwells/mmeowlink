@@ -63,10 +63,14 @@ class SerialRfSpy:
     self.buf = bytearray()
 
   def do_command(self, command, param="", timeout=0):
-    self.send_command(command, param)
+    self.send_command(command, param, timeout=timeout)
     return self.get_response(timeout=timeout)
 
   def send_command(self, command, param="", timeout=1):
+    if timeout is None or timeout <= 0:
+      # We don't want infinite hangs for things, as it'll lock up processing
+      raise CommsException("Timeout cannot be None, zero, or negative - coding error")
+
     self.ser.write_timeout = timeout
 
     self.ser.write(chr(command))
@@ -77,8 +81,13 @@ class SerialRfSpy:
 
     self.ser.write_timeout = self.default_write_timeout
 
-  def get_response(self, timeout=5):
+  def get_response(self, timeout=None):   # KW: we had the timeout set to 5
     log.debug("get_response: timeout = %s" % str(timeout))
+
+    if timeout is None or timeout <= 0:
+      # We don't want infinite hangs for things, as it'll lock up processing
+      raise CommsException("Timeout cannot be None, zero, or negative - coding error")
+
     start = time.time()
     # print("Timeout: " + str(timeout) + " " + str(start))
     if not timeout:
@@ -98,7 +107,7 @@ class SerialRfSpy:
           log.debug("response = command interrupted, getting the next response")
           continue
         return r
-      if (timeout > 0) and (start + timeout < time.time()):
+      if (start + timeout < time.time()):
         log.debug("gave up waiting for response from subg_rfspy")
         return bytearray()
       time.sleep(0.005)

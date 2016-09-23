@@ -94,7 +94,7 @@ class Packet (_Packet):
       valid = calculated == crc
 
     if not valid:
-      raise InvalidPacketReceived
+      raise InvalidPacketReceived("Bad packet CRC")
 
     record = dict(date=stamp * 1000
            , dateString=dt.isoformat( )

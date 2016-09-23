@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-from mmeowlink.cli import messages
+from mmeowlink.cli.send_msg_app import SendMsgApp
 
 if __name__ == '__main__':
-  app = messages.SendMsgApp( )
-  app.run(None)
+  SendMsgApp().run(None)
