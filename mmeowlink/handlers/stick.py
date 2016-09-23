@@ -216,7 +216,7 @@ class Pump (session.Pump):
     sender = Sender(self.link)          # would like to try this just once??
     single_status = False
     try:
-      single_status = sender(self.command, timeout=2, retries=1)
+      single_status = sender(self.command, timeout=2)
     except CommsException as e:
       log.warning("Exception raised on single wake up transmission: %s" % str(e))
     if single_status:     # Cane this be false or None with no exception?  If not, just move the 'return True' up to after the send
