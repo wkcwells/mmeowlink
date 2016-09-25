@@ -162,7 +162,10 @@ class Sender (object):
         self.restart_command()
       time.sleep(self.RETRY_BACKOFF * retry_count)
 
+# Used to send a command repeatedly - e.g. to wakeup pump
+# KW TODO: key question is whether you have to be sending continuously for the pump to catch it and wakeup??
 class Repeater (Sender):
+
 
   def __call__ (self, command, repetitions=None, ack_wait_seconds=None):
     self.command = command
@@ -170,7 +173,7 @@ class Repeater (Sender):
     start = time.time()
     pkt = Packet.fromCommand(self.command, serial=self.command.serial)
     buf = pkt.assemble( )
-    log.debug('Sending repeated message %s' % (str(buf).encode('hex')))
+    log.warning('Sending repeated message %s, %d times, at time: %s' % (str(buf).encode('hex'), repetitions, time.time()))
 
     self.link.write(buf, repetitions=repetitions)
 
@@ -181,6 +184,7 @@ class Repeater (Sender):
     # testing, which shows that it takes 8.04 seconds to send 500 packets
     # (8.04/500 =~ 0.016 packets per second).
     # We don't want to miss the reply, so take off a bit:
+    log.warning('Sleeping at time: %f' % (time.time() - start))
     time.sleep((repetitions * 0.016) - 2.2)
 
     # Sometimes the first packet received will be mangled by the simultaneous
@@ -188,12 +192,18 @@ class Repeater (Sender):
     # being received. Note how ever that we do *not* retry on timeouts, since
     # our wait period is typically very long here, which would lead to long
     # waits with no activity. It's better to fail and retry externally
+    log.warning('First ack wait at time: %f' % (time.time() - start))
     while (time.time() <= start + ack_wait_seconds):
       try:
         self.wait_for_ack()
+        log.error("Ack received at %f" % (time.time() - start))
         return True
-      except CommsException, InvalidPacketReceived:
-        log.error("Response not received - retrying at %s" % time.time)
+      except CommsException as e:
+        log.error("Repeater Comm exception waiting for response - %s - retrying at %f" % (str(e), time.time() - start))
+      except InvalidPacketReceived as e:
+        log.error("Repeater invalid packet exception waiting for response - %s - retrying at %f" % (str(e), time.time() - start))
+      except IOError as e:
+        log.error("Repeater IOError exception waiting for response - %s - retrying at %f" % (str(e), time.time() - start))
 
     return False
 
@@ -219,12 +229,12 @@ class Pump (session.Pump):
       single_status = sender(self.command)
     except CommsException as e:
       log.warning("Exception raised on single wake up transmission: %s" % str(e))
-    if single_status:     # Cane this be false or None with no exception?  If not, just move the 'return True' up to after the send
+    if single_status:     # Can this be false or None with no exception?  If not, just move the 'return True' up to after the send
       return self.command.getData();
-      return model
+      # return model
     else:
       # Else pump is not awake??  is this possible? Or will it always raise exception?
-      print("DO WE EVER GET HERE?")  # Yes we were but that may have just been a bug from when I changed the retry logic
+      log.warning("get_model(): Pump is not awake")
 
 
 
