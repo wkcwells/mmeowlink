@@ -101,7 +101,7 @@ class Sender (object):
   def prelude (self, timeout=None):
     link = self.link
     command = self.command
-    log.warning("*** Sending prelude for command %d" % command.code)
+    log.debug("*** Sending prelude for command %d" % command.code)
 
     payload = bytearray([0])
     self.pkt = Packet.fromCommand(command, payload=payload, serial=command.serial)
@@ -121,9 +121,12 @@ class Sender (object):
     except AttributeError as e:
       log.error("AttributeError exception in mmeowlink.stick.prelude - %s." % str(e))
       self.link.write(buf)      # Why do this? Kinda strange?
+    except CommsException as e:
+      log.error("Comms Exception in mmeowlink.stick.prelude - %s." % str(e))
+      raise (CommsException("Comms Exception in mmeowlink.stick.prelude - %s." % str(e)))  # Kind of a hack for now
     except Exception as e:
-      log.error("Exception in mmeowlink.stick.prelude - %s." % str(e))
-      raise (CommsException("Exception in mmeowlink.stick.prelude - %s." % str(e)))  # Kind of a hack for now
+      log.error("Unexpected Exception in mmeowlink.stick.prelude - %s." % str(e))
+      raise (Exception("Unexpected Exception in mmeowlink.stick.prelude - %s." % str(e)))      # Kind of a hack for now
 
   def upload (self):
     params = self.command.params
