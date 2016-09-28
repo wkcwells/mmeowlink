@@ -98,25 +98,32 @@ class Sender (object):
     if self.responds_to(resp):
       return resp
 
-  def prelude (self):
+  def prelude (self, timeout=None):
     link = self.link
     command = self.command
-    log.debug("*** Sending prelude for command %d" % command.code)
+    log.warning("*** Sending prelude for command %d" % command.code)
 
     payload = bytearray([0])
     self.pkt = Packet.fromCommand(command, payload=payload, serial=command.serial)
     self.pkt = self.pkt.update(payload)
     buf = self.pkt.assemble( )
     try:
-      buf = self.link.write_and_read(buf)
+      buf = self.link.write_and_read(buf, timeout=timeout)
+      if len(buf) == 0:
+        log.error("Prelude: zero length response received")
+        raise (CommsException("Prelude: zero length response received"))    # Kind of a hack for now
       resp = Packet.fromBuffer(buf)
       if self.responds_to(resp):
         if resp.op == 0x06:
           self.received_ack = True
         else:
           self.respond(resp)
-    except AttributeError:
-      self.link.write(buf)
+    except AttributeError as e:
+      log.error("AttributeError exception in mmeowlink.stick.prelude - %s." % str(e))
+      self.link.write(buf)      # Why do this? Kinda strange?
+    except Exception as e:
+      log.error("Exception in mmeowlink.stick.prelude - %s." % str(e))
+      raise (CommsException("Exception in mmeowlink.stick.prelude - %s." % str(e)))  # Kind of a hack for now
 
   def upload (self):
     params = self.command.params
