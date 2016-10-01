@@ -143,10 +143,11 @@ class Sender (object):
     self.command.data = bytearray()
     self.command.responded = False
 
-  def __call__ (self, command):
+  def __call__ (self, command, retries=None):
     self.command = command
-
-    for retry_count in range(self.STANDARD_RETRY_COUNT):
+    if retries is None:
+      retries=self.STANDARD_RETRY_COUNT
+    for retry_count in range(retries):
       try:
         self.prelude()
         self.upload()
@@ -236,7 +237,7 @@ class Pump (session.Pump):
     sender = Sender(self.link)          # would like to try this just once??
     single_status = False
     try:
-      single_status = sender(self.command)
+      single_status = sender(self.command, retries=1)
     except CommsException as e:
       log.warning("Exception raised on single wake up transmission: %s" % str(e))
     if single_status:     # Can this be false or None with no exception?  If not, just move the 'return True' up to after the send
