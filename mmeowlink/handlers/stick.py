@@ -119,14 +119,14 @@ class Sender (object):
         else:
           self.respond(resp)
     except AttributeError as e:
-      log.error("AttributeError exception in mmeowlink.stick.prelude - %s." % str(e))
+      log.error("AttributeError exception in mmeowlink.stick.prelude - %s" % str(e))
       self.link.write(buf)      # Why do this? Kinda strange?
     except CommsException as e:
-      log.error("Comms Exception in mmeowlink.stick.prelude - %s." % str(e))
-      raise (CommsException("Comms Exception in mmeowlink.stick.prelude - %s." % str(e)))  # Kind of a hack for now
+      log.error("Comms Exception in mmeowlink.stick.prelude - %s" % str(e))
+      raise (CommsException("Comms Exception in mmeowlink.stick.prelude - %s" % str(e)))  # Kind of a hack for now
     except Exception as e:
-      log.error("Unexpected Exception in mmeowlink.stick.prelude - %s." % str(e))
-      raise (Exception("Unexpected Exception in mmeowlink.stick.prelude - %s." % str(e)))      # Kind of a hack for now
+      log.error("Unexpected Exception in mmeowlink.stick.prelude - %s (%s)" % (str(e), type(e)))
+      raise (Exception("Unexpected Exception in mmeowlink.stick.prelude - %s (%s)" % (str(e), type(e))))      # Kind of a hack for now
 
   def upload (self):
     params = self.command.params
