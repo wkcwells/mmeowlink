@@ -273,7 +273,7 @@ class Pump (session.Pump):
         return model
       # Else what?
     else:
-      raise CommsException("No acknowledgement from pump on wakeup. Is it out of range or is the battery too low?")
+      raise CommsException("Failed to wakeup pump.")
 
   def execute (self, command):
     command.serial = self.serial
