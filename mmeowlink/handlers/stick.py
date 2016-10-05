@@ -124,6 +124,9 @@ class Sender (object):
     except CommsException as e:
       log.error("Comms Exception in mmeowlink.stick.prelude - %s" % str(e))
       raise (CommsException("Comms Exception in mmeowlink.stick.prelude - %s" % str(e)))  # Kind of a hack for now
+    except InvalidPacketReceived as e:
+      log.error("Invalid Packet Received in mmeowlink.stick.prelude - '%s' - retrying: %s of %s" % (e, nak_attempts + 1, self.NAK_RETRIES))
+      raise InvalidPacketReceived("Invalid pump packet received: " + str(e))
     except Exception as e:
       log.error("Unexpected Exception in mmeowlink.stick.prelude - %s (%s)" % (str(e), type(e)))
       raise (Exception("Unexpected Exception in mmeowlink.stick.prelude - %s (%s)" % (str(e), type(e))))      # Kind of a hack for now
@@ -166,12 +169,12 @@ class Sender (object):
 
         return command
       except InvalidPacketReceived as e:
-        log.error("Invalid Packet Received - '%s' - retrying: %s of %s" % (e, retry_count+1, self.STANDARD_RETRY_COUNT))
-        self.restart_command()
+        log.error("Invalid Packet Received - '%s' - retry count: %s of %s" % (e, retry_count+1, retries))
       except CommsException as e:
-        log.error("Timed out or other comms error - %s - retrying: %s of %s" % (e, retry_count+1, self.STANDARD_RETRY_COUNT))
-        self.restart_command()
-      time.sleep(self.RETRY_BACKOFF * retry_count)
+        log.error("Timed out or other comms error - %s - retry count: %s of %s" % (e, retry_count+1, retries))
+      if retry_count < retries:   # Duplicates loop logic
+        self.restart_command()    # Not necessary if not retrying
+        time.sleep(self.RETRY_BACKOFF * retry_count)
 
 # Used to send a command repeatedly - e.g. to wakeup pump
 # KW TODO: key question is whether you have to be sending continuously for the pump to catch it and wakeup??
