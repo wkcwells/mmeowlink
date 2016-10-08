@@ -125,8 +125,8 @@ class Sender (object):
       log.error("Comms Exception in mmeowlink.stick.prelude - %s" % str(e))
       raise (CommsException("Comms Exception in mmeowlink.stick.prelude - %s" % str(e)))  # Kind of a hack for now
     except InvalidPacketReceived as e:
-      log.error("Invalid Packet Received in mmeowlink.stick.prelude - '%s' - retrying: %s of %s" % (e, nak_attempts + 1, self.NAK_RETRIES))
-      raise InvalidPacketReceived("Invalid pump packet received: " + str(e))
+      log.error("Invalid Packet Received in mmeowlink.stick.prelude - %s" % str(e))
+      raise InvalidPacketReceived("Invalid pump packet received in mmeowlink.stick.prelude - %s" % str(e))
     except Exception as e:
       log.error("Unexpected Exception in mmeowlink.stick.prelude - %s (%s)" % (str(e), type(e)))
       raise (Exception("Unexpected Exception in mmeowlink.stick.prelude - %s (%s)" % (str(e), type(e))))      # Kind of a hack for now
