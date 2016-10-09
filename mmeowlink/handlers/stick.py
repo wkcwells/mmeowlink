@@ -6,6 +6,7 @@ from .. exceptions import InvalidPacketReceived, CommsException
 import sys
 import logging
 import time
+import traceback
 
 import logging
 
@@ -126,7 +127,7 @@ class Sender (object):
       raise (CommsException("Comms Exception in mmeowlink.stick.prelude - %s" % str(e)))  # Kind of a hack for now
     except InvalidPacketReceived as e:
       log.error("Invalid Packet Received in mmeowlink.stick.prelude - %s" % str(e))
-      raise InvalidPacketReceived("Invalid pump packet received in mmeowlink.stick.prelude - %s" % str(e))
+      raise (InvalidPacketReceived("Invalid pump packet received in mmeowlink.stick.prelude - %s" % str(e)))
     except Exception as e:
       log.error("Unexpected Exception in mmeowlink.stick.prelude - %s (%s)" % (str(e), type(e)))
       raise (Exception("Unexpected Exception in mmeowlink.stick.prelude - %s (%s)" % (str(e), type(e))))      # Kind of a hack for now
@@ -168,13 +169,28 @@ class Sender (object):
             self.respond(resp)
 
         return command
+      # We are doing very similar error processing in several places - combine...
       except InvalidPacketReceived as e:
-        log.error("Invalid Packet Received - '%s' - retry count: %s of %s" % (e, retry_count+1, retries))
+        log.error("Invalid Packet Received - '%s' - retrying: %s of %s" % (e, retry_count + 1, retries))
+        traceback.print_exc()
+        if (retry_count >= retries - 1):
+          raise InvalidPacketReceived("*** Invalid pump packet received: " + str(e))  # Not available until Python 3: 'from e'    # Needs testing
+        else:
+          self.restart_command()
+          time.sleep(self.RETRY_BACKOFF * retry_count)
+          continue
       except CommsException as e:
-        log.error("Timed out or other comms error - %s - retry count: %s of %s" % (e, retry_count+1, retries))
-      if retry_count < retries:   # Duplicates loop logic
-        self.restart_command()    # Not necessary if not retrying
-        time.sleep(self.RETRY_BACKOFF * retry_count)
+        log.error("Timed out or other comms error - %s - retrying: %s of %s" % (e, retry_count + 1, retries))
+        traceback.print_exc()
+        if (retry_count >= retries - 1):
+          raise CommsException("*** Pump comm error: " + str(e))  # from e                        # Needs testing - pyloop has some special processing for this exception
+          #  Note this avoids the final timeout wait as a beneficial side effect
+          #  Also note: this only captures the final error, not all the attempts...
+        else:
+          self.restart_command()
+          time.sleep(self.RETRY_BACKOFF * retry_count)
+          continue
+      log.error("SHOULD NEVER GET HERE")    # Do we need a generic exception catch??
 
 # Used to send a command repeatedly - e.g. to wakeup pump
 # KW TODO: key question is whether you have to be sending continuously for the pump to catch it and wakeup??

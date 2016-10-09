@@ -92,6 +92,8 @@ class Packet (_Packet):
       crc = int(rfpacket[-1])
       calculated = lib.CRC8.compute(rfpacket[:-1])
       valid = calculated == crc
+    else:
+      raise InvalidPacketReceived("Packet too short: " + str(len(rfpacket)))
 
     if not valid:
       raise InvalidPacketReceived("Bad packet CRC: calculated: 0x%x, expected: 0x%x", (calculated, crc))
