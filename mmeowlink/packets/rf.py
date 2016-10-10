@@ -96,7 +96,7 @@ class Packet (_Packet):
       raise InvalidPacketReceived("Packet too short: " + str(len(rfpacket)))
 
     if not valid:
-      raise InvalidPacketReceived("Bad packet CRC: calculated: 0x%x, expected: 0x%x", (calculated, crc))
+      raise InvalidPacketReceived("Bad packet CRC: calculated: 0x%x, expected: 0x%x" % (calculated, crc))
 
     record = dict(date=stamp * 1000
            , dateString=dt.isoformat( )
